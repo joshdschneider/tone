@@ -1,0 +1,27 @@
+# Ignore node modules
+node_modules
+
+# Ignore build artifacts
+dist
+
+# Ignore test and documentation files
+*.md
+*.test.ts
+*.test.js
+tests/
+
+# Ignore logs and databases
+*.log
+*.sqlite
+npm-debug.log
+
+# Ignore editor directories
+.idea/
+.vscode/
+
+# Ignore local environment configuration
+.env
+.env.local
+
+# Ignore Git history
+.git/
