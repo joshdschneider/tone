@@ -4,8 +4,9 @@ import { captureException } from '../helpers/captureException';
 import CallService from '../services/CallService';
 import { createSynthesizer } from '../synthesizer/createSynthesizer';
 import { createTranscriber } from '../transcriber/createTranscriber';
-import { CallConfiguration, ConnectionEvent } from '../types';
+import { AgentConfiguration, ConnectionEvent } from '../types';
 import { DEFAULT_GREETING, DEFAULT_PROMPT } from '../utils/constants';
+import { log } from '../utils/log';
 import { Call } from './Call';
 
 export type CreateCallProps = {
@@ -14,11 +15,11 @@ export type CreateCallProps = {
 };
 
 export async function createCall({ socket, data }: CreateCallProps) {
-  const { event, ['content-type']: _, id: callId } = data;
-  let config: CallConfiguration;
+  const { event, ['content-type']: _, id } = data;
+  let config: AgentConfiguration;
 
   try {
-    const response = await CallService.startCall(callId);
+    const response = await CallService.startCall(id);
     config = response.callConfiguration;
   } catch (err) {
     captureException(err);
@@ -26,8 +27,10 @@ export async function createCall({ socket, data }: CreateCallProps) {
     return;
   }
 
+  log(`Creating call with config: ${JSON.stringify(config)}`);
+
   const {
-    id,
+    id: agentId,
     direction,
     prompt,
     greeting,
@@ -51,18 +54,19 @@ export async function createCall({ socket, data }: CreateCallProps) {
   });
 
   const agent = createAgent({
+    id: agentId,
     prompt: prompt || DEFAULT_PROMPT,
     greeting: greeting || DEFAULT_GREETING,
     voicemail: voicemail || undefined,
     functions: functions || undefined,
-    synthesizer,
   });
 
   return new Call({
     socket,
-    id: callId,
+    id,
     direction,
     transcriber,
     agent,
+    synthesizer,
   });
 }

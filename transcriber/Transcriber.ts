@@ -9,6 +9,7 @@ import { EventEmitter } from 'ws';
 import { captureException } from '../helpers/captureException';
 import { Transcript } from '../types';
 import { deepgram } from '../utils/deepgram';
+import { log } from '../utils/log';
 
 export class Transcriber extends EventEmitter {
   private connection: LiveTranscription;
@@ -20,23 +21,26 @@ export class Transcriber extends EventEmitter {
   }
 
   private bindConnectionListeners() {
-    this.connection.on('open', this.handleConnectionOpen);
-    this.connection.on('close', this.handleConnectionClose);
-    this.connection.on('error', this.handleConnectionError);
-    this.connection.on('transcriptReceived', this.handleTranscript);
+    this.connection.on('open', this.handleConnectionOpen.bind(this));
+    this.connection.on('close', this.handleConnectionClose.bind(this));
+    this.connection.on('error', this.handleConnectionError.bind(this));
+    this.connection.on('transcriptReceived', this.handleTranscript.bind(this));
   }
 
   private handleConnectionOpen() {
+    log(`Transcriber connection open`);
     this.emit('open');
   }
 
   private handleConnectionClose() {
+    log(`Transcriber connection closed`);
+    this.cleanup();
     this.emit('close');
   }
 
   private handleConnectionError(err: Error) {
     captureException(err);
-    this.emit('error');
+    this.emit('error', err);
   }
 
   private handleTranscript(message: string) {
@@ -74,6 +78,12 @@ export class Transcriber extends EventEmitter {
   }
 
   public close() {
+    log(`Closing transcriber connection`);
     this.connection.finish();
+  }
+
+  public cleanup() {
+    log(`All listeners removed from Transcriber`);
+    this.connection.removeAllListeners();
   }
 }

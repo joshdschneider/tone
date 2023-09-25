@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node';
+import { LogLevel, log } from '../utils/log';
 
 export function captureException(err: any) {
-  console.error(err);
+  log(err, LogLevel.ERROR);
   Sentry.captureException(err);
 }

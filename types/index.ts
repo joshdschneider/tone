@@ -26,7 +26,7 @@ export type DefaultError = {
   error: string;
 };
 
-export type CallConfiguration = {
+export type AgentConfiguration = {
   id: string;
   direction: CallDirection;
   prompt: string | null;
@@ -38,3 +38,74 @@ export type CallConfiguration = {
   language: string | null;
   keywords: string | null;
 };
+
+export enum AgentState {
+  IDLE = 'IDLE',
+  LISTENING = 'LISTENING',
+  PROCESSING = 'PROCESSING',
+  SPEAKING = 'SPEAKING',
+}
+
+export enum Event {
+  CALL_CONNECTED_INBOUND = 'CALL_CONNECTED_INBOUND',
+  CALL_CONNECTED_OUTBOUND = 'CALL_CONNECTED_OUTBOUND',
+  TRANSCRIPT_PARTIAL = 'TRANSCRIPT_PARTIAL',
+  TRANSCRIPT_FULL = 'TRANSCRIPT_FULL',
+  TRANSCRIPT_ENDPOINT = 'TRANSCRIPT_ENDPOINT',
+  GENERATION_STARTED = 'GENERATION_STARTED',
+  GENERATION_ENDED = 'GENERATION_ENDED',
+  GENERATION_ERROR = 'GENERATION_ERROR',
+  SYNTHESIS_STARTED = 'SYNTHESIS_STARTED',
+  SYNTHESIS_ENDED = 'SYNTHESIS_ENDED',
+  SYNTHESIS_ERROR = 'SYNTHESIS_ERROR',
+}
+
+export type QueueEvent = {
+  event: Event;
+  payload?: any;
+};
+
+export interface OpenAIBaseMessage {
+  role: Role;
+  content: string | null | any;
+}
+
+export enum Role {
+  SYSTEM = 'system',
+  USER = 'user',
+  ASSISTANT = 'assistant',
+  FUNCTION = 'function',
+}
+
+export interface ContentMessage extends OpenAIBaseMessage {
+  role: Role.SYSTEM | Role.USER | Role.ASSISTANT;
+  content: string;
+}
+
+export interface AssistantFunctionCall extends OpenAIBaseMessage {
+  role: Role.ASSISTANT;
+  content: null;
+  function_call: {
+    name: string;
+    arguments: any;
+  };
+}
+
+export interface FunctionResponse extends OpenAIBaseMessage {
+  role: Role.FUNCTION;
+  name: string;
+  content: any;
+}
+
+export type OpenAIMessage = ContentMessage | AssistantFunctionCall | FunctionResponse;
+
+export type Message = {
+  start: number;
+  end?: number;
+} & OpenAIMessage;
+
+export enum GenerationType {
+  GREETING = 'GREETING',
+  RECOVERY = 'RECOVERY',
+  RESPONSE = 'RESPONSE',
+}

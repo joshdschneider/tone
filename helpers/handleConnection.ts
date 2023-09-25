@@ -1,17 +1,50 @@
 import WebSocket from 'ws';
+import { Call } from '../call/Call';
+import { createCall } from '../call/createCall';
+import { LogLevel, log } from '../utils/log';
+import { now } from '../utils/now';
+import { captureException } from './captureException';
 
-export function handleConnection(ws: WebSocket.WebSocket) {
+export function handleConnection(socket: WebSocket.WebSocket) {
   console.log('New client connected.');
+  let call: Call | undefined;
 
-  ws.on('message', (message: WebSocket.RawData) => {
-    console.log(`Received message: ${message}`);
+  socket.on('message', (message: WebSocket.RawData) => {
+    if (call) {
+      if (message instanceof Buffer && message.length === 640) {
+        call.processAudio(message);
+      } else {
+        try {
+          const data = JSON.parse(message.toString());
+          if (data && typeof data === 'object') {
+            call.processEvent(data);
+          }
+        } catch (err: any) {
+          log(err, LogLevel.WARN);
+        }
+      }
+    } else {
+      try {
+        const data = JSON.parse(message.toString());
+        if (data && data.event === 'websocket:connected') {
+          createCall({ socket, data })
+            .then((callInstance) => {
+              call = callInstance;
+            })
+            .catch((err) => {
+              captureException(err);
+              socket.close();
+            });
+        }
+      } catch (_) {
+        log(`Lost audio at ${now()}`, LogLevel.WARN);
+      }
+    }
   });
 
-  ws.on('error', (err: Error) => {
-    console.error(`WebSocket Error: ${err.message}`);
-  });
+  socket.on('error', captureException);
 
-  ws.on('close', (code: number, reason: Buffer) => {
-    console.log(`Client disconnected with code: ${code}, reason: ${reason.toString()}`);
+  socket.on('close', (code: number, reason: Buffer) => {
+    log(`Client disconnected with code: ${code}, reason: ${reason.toString()}`);
   });
 }
