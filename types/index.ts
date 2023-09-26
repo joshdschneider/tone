@@ -52,12 +52,16 @@ export enum Event {
   TRANSCRIPT_PARTIAL = 'TRANSCRIPT_PARTIAL',
   TRANSCRIPT_FULL = 'TRANSCRIPT_FULL',
   TRANSCRIPT_ENDPOINT = 'TRANSCRIPT_ENDPOINT',
+  TRANSCRIBER_ERROR = 'TRANSCRIBER_ERROR',
+  TRANSCRIBER_FATAL = 'TRANSCRIBER_FATAL',
   GENERATION_STARTED = 'GENERATION_STARTED',
   GENERATION_ENDED = 'GENERATION_ENDED',
   GENERATION_ERROR = 'GENERATION_ERROR',
+  GENERATION_FATAL = 'GENERATION_FATAL',
   SYNTHESIS_STARTED = 'SYNTHESIS_STARTED',
   SYNTHESIS_ENDED = 'SYNTHESIS_ENDED',
   SYNTHESIS_ERROR = 'SYNTHESIS_ERROR',
+  SYNTHESIS_FATAL = 'SYNTHESIS_FATAL',
 }
 
 export type QueueEvent = {
@@ -76,6 +80,22 @@ export enum Role {
   ASSISTANT = 'assistant',
   FUNCTION = 'function',
 }
+
+export interface OpenAIFunction {
+  name: string;
+  description?: string;
+  parameters: {
+    type: 'object';
+    properties: {
+      [key: string]: any;
+    };
+    required?: string[];
+  };
+}
+
+export type Fn = OpenAIFunction & {
+  actionId: string;
+};
 
 export interface ContentMessage extends OpenAIBaseMessage {
   role: Role.SYSTEM | Role.USER | Role.ASSISTANT;

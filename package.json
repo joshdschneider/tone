@@ -17,6 +17,7 @@
     "@sentry/profiling-node": "^1.2.1",
     "compromise": "^14.9.0",
     "dotenv": "^16.0.3",
+    "eventsource-parser": "^1.1.1",
     "node-fetch": "^2.6.11",
     "typescript": "^5.0.4",
     "ws": "^8.13.0"

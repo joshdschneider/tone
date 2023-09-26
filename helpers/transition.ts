@@ -1,11 +1,11 @@
-import { AgentState, Event, GenerationType, QueueEvent, Transcript } from '../types';
+import { AgentState, Event, GenerationType, Message, QueueEvent, Transcript } from '../types';
 
 export type TransitionProps = {
   currentState: AgentState;
   queueEvent: QueueEvent;
   greeting?: string;
   setState: (state: AgentState) => void;
-  generate: (type?: GenerationType) => void;
+  generate: (messages: Message[], type?: GenerationType) => void;
   cancelGeneration: () => void;
   cancelSynthesis: () => void;
   appendTranscript: (transcript: Transcript) => void;
@@ -18,7 +18,7 @@ export function transition({ currentState, queueEvent, greeting, ...actions }: T
       switch (event) {
         case Event.CALL_CONNECTED_INBOUND:
           actions.setState(AgentState.PROCESSING);
-          actions.generate(GenerationType.GREETING);
+          actions.generate(payload, GenerationType.GREETING);
           return;
 
         case Event.CALL_CONNECTED_OUTBOUND:
@@ -37,7 +37,7 @@ export function transition({ currentState, queueEvent, greeting, ...actions }: T
         case Event.TRANSCRIPT_ENDPOINT:
           actions.appendTranscript(payload.transcript);
           actions.setState(AgentState.PROCESSING);
-          actions.generate(GenerationType.GREETING);
+          actions.generate(payload, GenerationType.GREETING);
           return;
 
         default:
@@ -57,7 +57,7 @@ export function transition({ currentState, queueEvent, greeting, ...actions }: T
         case Event.TRANSCRIPT_ENDPOINT:
           actions.appendTranscript(payload.transcript);
           actions.setState(AgentState.PROCESSING);
-          actions.generate();
+          actions.generate(payload);
           return;
 
         default:
@@ -82,7 +82,7 @@ export function transition({ currentState, queueEvent, greeting, ...actions }: T
           actions.cancelGeneration();
           actions.appendTranscript(payload.transcript);
           actions.setState(AgentState.PROCESSING);
-          actions.generate();
+          actions.generate(payload);
           return;
 
         case Event.SYNTHESIS_STARTED:
@@ -118,7 +118,7 @@ export function transition({ currentState, queueEvent, greeting, ...actions }: T
           actions.cancelSynthesis();
           actions.appendTranscript(payload.transcript);
           actions.setState(AgentState.PROCESSING);
-          actions.generate();
+          actions.generate(payload);
           return;
 
         case Event.SYNTHESIS_ENDED:
@@ -129,14 +129,14 @@ export function transition({ currentState, queueEvent, greeting, ...actions }: T
           actions.cancelGeneration();
           actions.cancelSynthesis();
           actions.setState(AgentState.PROCESSING);
-          actions.generate(GenerationType.RECOVERY);
+          actions.generate(payload, GenerationType.RECOVERY);
           return;
 
         case Event.SYNTHESIS_ERROR:
           actions.cancelGeneration();
           actions.cancelSynthesis();
           actions.setState(AgentState.PROCESSING);
-          actions.generate(GenerationType.RECOVERY);
+          actions.generate(payload, GenerationType.RECOVERY);
           return;
 
         default:

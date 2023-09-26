@@ -15,6 +15,14 @@ export enum ElevenLabsModel {
 
 export function createSynthesizer({ provider, voiceId, language }: CreateSynthesizerProps) {
   const english = !language || language === 'en-US';
-  const model = english ? ElevenLabsModel.ENGLISH_V1 : ElevenLabsModel.MULTILINGUAL_V2;
-  return new Synthesizer({ provider, voiceId, model });
+  const model = english ? ElevenLabsModel.ENGLISH_V1 : ElevenLabsModel.MULTILINGUAL_V1;
+
+  return new Synthesizer({
+    provider,
+    model,
+    voiceId,
+    stability: 0.9,
+    similarityBoost: 0.75,
+    optimizeStreamingLatency: 2,
+  });
 }

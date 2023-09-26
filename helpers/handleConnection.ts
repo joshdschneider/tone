@@ -6,7 +6,7 @@ import { now } from '../utils/now';
 import { captureException } from './captureException';
 
 export function handleConnection(socket: WebSocket.WebSocket) {
-  console.log('New client connected.');
+  log('New client connected');
   let call: Call | undefined;
 
   socket.on('message', (message: WebSocket.RawData) => {
@@ -44,7 +44,11 @@ export function handleConnection(socket: WebSocket.WebSocket) {
 
   socket.on('error', captureException);
 
-  socket.on('close', (code: number, reason: Buffer) => {
-    log(`Client disconnected with code: ${code}, reason: ${reason.toString()}`);
+  socket.on('close', (code: number) => {
+    log(`Socket closed with code ${code}`);
+    if (call) {
+      call.destroy();
+      call = undefined;
+    }
   });
 }

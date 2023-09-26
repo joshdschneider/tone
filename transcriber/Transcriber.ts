@@ -9,38 +9,54 @@ import { EventEmitter } from 'ws';
 import { captureException } from '../helpers/captureException';
 import { Transcript } from '../types';
 import { deepgram } from '../utils/deepgram';
-import { log } from '../utils/log';
+import { LogLevel, log } from '../utils/log';
 
 export class Transcriber extends EventEmitter {
-  private connection: LiveTranscription;
+  private options: LiveTranscriptionOptions;
+  private connection?: LiveTranscription;
+  private errorCount: number;
+  private maxErrors: number;
 
   constructor(options: LiveTranscriptionOptions) {
     super();
-    this.connection = deepgram.transcription.live(options);
+    this.options = options;
+    this.errorCount = 0;
+    this.maxErrors = 3;
+    this.connect();
+  }
+
+  private connect() {
+    this.connection = deepgram.transcription.live(this.options);
     this.bindConnectionListeners();
   }
 
   private bindConnectionListeners() {
-    this.connection.on('open', this.handleConnectionOpen.bind(this));
-    this.connection.on('close', this.handleConnectionClose.bind(this));
-    this.connection.on('error', this.handleConnectionError.bind(this));
-    this.connection.on('transcriptReceived', this.handleTranscript.bind(this));
+    if (this.connection) {
+      this.connection.on('open', this.handleConnectionOpen.bind(this));
+      this.connection.on('close', this.handleConnectionClose.bind(this));
+      this.connection.on('transcriptReceived', this.handleTranscript.bind(this));
+      this.connection.on('error', this.handleError.bind(this));
+    } else {
+      log(`Failed to bind transcriber listeners`, LogLevel.WARN);
+    }
   }
 
   private handleConnectionOpen() {
     log(`Transcriber connection open`);
-    this.emit('open');
   }
 
   private handleConnectionClose() {
     log(`Transcriber connection closed`);
-    this.cleanup();
-    this.emit('close');
   }
 
-  private handleConnectionError(err: Error) {
+  private handleError(err: Error) {
     captureException(err);
-    this.emit('error', err);
+    this.errorCount++;
+    if (this.errorCount >= this.maxErrors) {
+      this.emit('fatal');
+    } else {
+      this.emit('error', err);
+    }
   }
 
   private handleTranscript(message: string) {
@@ -50,8 +66,8 @@ export class Transcriber extends EventEmitter {
     try {
       response = JSON.parse(message);
       alternative = response.channel.alternatives[0];
-    } catch (err) {
-      captureException(err);
+    } catch (err: any) {
+      this.handleError(err);
       return;
     }
 
@@ -71,19 +87,42 @@ export class Transcriber extends EventEmitter {
   }
 
   public send(audio: Buffer) {
+    if (!this.connection) {
+      const err = new Error('Transcriber connection undefined');
+      this.handleError(err);
+      return;
+    }
+
     const state = this.connection.getReadyState();
     if (state === ConnectionState.OPEN) {
       this.connection.send(audio);
+    } else {
+      log(`Transcriber not ready`, LogLevel.WARN);
     }
+  }
+
+  public restart() {
+    log(`Restarting transcriber connection`);
+    this.close();
+    this.connect();
   }
 
   public close() {
     log(`Closing transcriber connection`);
-    this.connection.finish();
+    if (this.connection) {
+      const state = this.connection.getReadyState();
+      if (state !== ConnectionState.CLOSED) {
+        this.connection.finish();
+      }
+
+      this.connection.removeAllListeners();
+      this.connection = undefined;
+    }
   }
 
-  public cleanup() {
-    log(`All listeners removed from Transcriber`);
-    this.connection.removeAllListeners();
+  public destroy() {
+    log(`Destroying transcriber`);
+    this.close();
+    this.removeAllListeners();
   }
 }
