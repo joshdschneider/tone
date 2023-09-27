@@ -1,4 +1,3 @@
-import { ConnectionState } from '@deepgram/sdk/dist/enums';
 import { LiveTranscription } from '@deepgram/sdk/dist/transcription/liveTranscription';
 import {
   Alternative,
@@ -10,6 +9,13 @@ import { captureException } from '../helpers/captureException';
 import { Transcript } from '../types';
 import { deepgram } from '../utils/deepgram';
 import { LogLevel, log } from '../utils/log';
+
+export declare enum ConnectionState {
+  CONNECTING = 0,
+  OPEN = 1,
+  CLOSING = 2,
+  CLOSED = 3,
+}
 
 export class Transcriber extends EventEmitter {
   private options: LiveTranscriptionOptions;

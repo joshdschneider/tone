@@ -1,10 +1,10 @@
-import { CallConfiguration } from '../types';
+import { AgentConfiguration } from '../types';
 import { TONE_API_URL, TONE_INTERNAL_API_KEY } from '../utils/constants';
 
 const BASE_URL = `${TONE_API_URL}/internal/calls`;
 
 type StartCallResponse = {
-  callConfiguration: CallConfiguration;
+  agentConfiguration: AgentConfiguration;
 };
 
 async function startCall(callId: string): Promise<StartCallResponse> {

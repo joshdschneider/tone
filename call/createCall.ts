@@ -20,7 +20,7 @@ export async function createCall({ socket, data }: CreateCallProps) {
 
   try {
     const response = await CallService.startCall(id);
-    config = response.callConfiguration;
+    config = response.agentConfiguration;
   } catch (err) {
     captureException(err);
     socket.close();
