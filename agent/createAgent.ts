@@ -1,13 +1,5 @@
-import { Agent } from './Agent';
+import { Agent, AgentConstructor } from './Agent';
 
-export type CreateAgentProps = {
-  id: string;
-  prompt: string;
-  greeting: string;
-  voicemail?: string;
-  functions?: string;
-};
-
-export function createAgent({ id, prompt, greeting, voicemail, functions }: CreateAgentProps) {
-  return new Agent({ id, prompt, greeting, voicemail, functions });
+export function createAgent(props: AgentConstructor) {
+  return new Agent(props);
 }

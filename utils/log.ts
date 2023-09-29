@@ -6,7 +6,7 @@ export enum LogLevel {
   ERROR = 'ERROR',
 }
 
-export function log(message: string, level?: LogLevel) {
+export function log(message: any, level?: LogLevel) {
   if (isDevelopment) {
     switch (level) {
       case LogLevel.INFO:

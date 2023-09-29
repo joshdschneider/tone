@@ -1,12 +1,8 @@
-import WebSocket, { EventEmitter } from 'ws';
+import { EventEmitter } from 'events';
+import WebSocket from 'ws';
 import { Agent } from '../agent/Agent';
-import { captureException } from '../helpers/captureException';
-import { transition } from '../helpers/transition';
-import CallService from '../services/CallService';
-import { Synthesizer } from '../synthesizer/Synthesizer';
 import { Transcriber } from '../transcriber/Transcriber';
-import { CallDirection, Event, Message, QueueEvent, Role, Transcript } from '../types';
-import { MESSAGE_TIMESTAMP_DELTA } from '../utils/constants';
+import { CallDirection, CallEvent, Message, Role, Transcript } from '../types';
 import { LogLevel, log } from '../utils/log';
 import { now } from '../utils/now';
 
@@ -16,7 +12,6 @@ export type CallConstructor = {
   direction: CallDirection;
   transcriber: Transcriber;
   agent: Agent;
-  synthesizer: Synthesizer;
 };
 
 export class Call extends EventEmitter {
@@ -25,43 +20,25 @@ export class Call extends EventEmitter {
   private direction: CallDirection;
   private transcriber: Transcriber;
   private agent: Agent;
-  private synthesizer: Synthesizer;
   private start: number;
   private end?: number;
-  private messages: Message[];
-  private queue: QueueEvent[];
-  private isProcessing: boolean;
 
-  constructor({ socket, id, direction, transcriber, agent, synthesizer }: CallConstructor) {
+  constructor({ socket, id, direction, transcriber, agent }: CallConstructor) {
     super();
     this.socket = socket;
     this.id = id;
     this.direction = direction;
     this.transcriber = transcriber;
     this.agent = agent;
-    this.synthesizer = synthesizer;
     this.start = now();
-    this.messages = [];
-    this.queue = [];
-    this.isProcessing = false;
     this.bindCallListeners();
   }
 
   private bindCallListeners() {
-    this.socket.on('close', this.onSocketClose.bind(this));
-    this.transcriber.on('transcript', this.onTranscript.bind(this));
-    this.transcriber.on('error', this.onTranscriberError.bind(this));
-    this.transcriber.on('fatal', this.onTranscriberFatal.bind(this));
-    this.agent.on('text', this.onGeneratedText.bind(this));
-    this.agent.on('start', this.onGenerationStarted.bind(this));
-    this.agent.on('end', this.onGenerationEnded.bind(this));
-    this.agent.on('error', this.onGenerationError.bind(this));
-    this.agent.on('fatal', this.onGenerationFatal.bind(this));
-    this.synthesizer.on('speech', this.onSynthesizedSpeech.bind(this));
-    this.synthesizer.on('start', this.onSynthesisStarted.bind(this));
-    this.synthesizer.on('end', this.onSynthesisEnded.bind(this));
-    this.synthesizer.on('error', this.onSynthesisError.bind(this));
-    this.synthesizer.on('fatal', this.onSynthesisFatal.bind(this));
+    this.socket.on('close', () => this.onSocketClose());
+    this.transcriber.on('transcript', (transcript: Transcript) => this.onTranscript(transcript));
+    this.transcriber.on('error', (err: any) => this.onTranscriberError(err));
+    this.transcriber.on('fatal', () => this.onTranscriberFatal());
   }
 
   public processAudio(buffer: Buffer) {
@@ -82,152 +59,37 @@ export class Call extends EventEmitter {
   }
 
   private onSocketClose() {
-    log('Ending call...');
+    log('Socket closed');
     this.endCall();
   }
 
   private onTranscript(transcript: Transcript) {
     log(`Transcript received: ${JSON.stringify(transcript)}`);
     if (!transcript.isFinal) {
-      this.enqueue({
-        event: Event.TRANSCRIPT_PARTIAL,
-        payload: { transcript },
-      });
+      this.agent.enqueue(CallEvent.TRANSCRIPT_PARTIAL);
     } else {
+      this.appendTranscript(transcript);
       if (!transcript.isEndpoint) {
-        this.enqueue({
-          event: Event.TRANSCRIPT_FULL,
-          payload: { transcript },
-        });
+        this.agent.enqueue(CallEvent.TRANSCRIPT_FULL);
       } else {
-        this.enqueue({
-          event: Event.TRANSCRIPT_ENDPOINT,
-          payload: { transcript },
-        });
+        this.agent.enqueue(CallEvent.TRANSCRIPT_ENDPOINT);
       }
     }
-  }
-
-  private onTranscriberError(err: Error) {
-    this.enqueue({ event: Event.TRANSCRIBER_ERROR });
-  }
-
-  private onTranscriberFatal() {
-    this.enqueue({ event: Event.TRANSCRIBER_FATAL });
-  }
-
-  private onGeneratedText(text: string) {
-    this.synthesizer.send(text);
-  }
-
-  private onGenerationStarted() {
-    this.enqueue({ event: Event.GENERATION_STARTED });
-  }
-
-  private onGenerationEnded() {
-    this.enqueue({ event: Event.GENERATION_ENDED });
-  }
-
-  private onGenerationFatal() {
-    this.enqueue({ event: Event.GENERATION_FATAL });
-  }
-
-  private onGenerationError() {
-    this.enqueue({ event: Event.GENERATION_ERROR });
-  }
-
-  private onSynthesizedSpeech(buffer: Buffer) {
-    this.socket.send(buffer);
-  }
-
-  private onSynthesisStarted() {
-    this.enqueue({ event: Event.SYNTHESIS_STARTED });
-  }
-
-  private onSynthesisEnded() {
-    this.enqueue({ event: Event.SYNTHESIS_ENDED });
-  }
-
-  private onSynthesisError() {
-    this.enqueue({ event: Event.SYNTHESIS_ERROR });
-  }
-
-  private onSynthesisFatal() {
-    this.enqueue({ event: Event.SYNTHESIS_FATAL });
-  }
-
-  private enqueue(event: QueueEvent) {
-    log(`Enqueueing event: ${JSON.stringify(event)}`);
-    this.queue.push(event);
-    if (!this.isProcessing) {
-      this.dequeue();
-    }
-  }
-
-  private dequeue() {
-    log(`Dequeueing event`);
-    if (this.queue.length === 0) {
-      log(`Stopping: no events in queue`);
-      this.isProcessing = false;
-      return;
-    }
-
-    this.isProcessing = true;
-    const event = this.queue.shift();
-    if (event) {
-      this.process(event);
-      this.dequeue();
-    } else {
-      log(`Dequeue attempted: event not found`, LogLevel.WARN);
-    }
-  }
-
-  private process(event: QueueEvent) {
-    log(`Processing event: ${JSON.stringify(event)}`);
-    transition({
-      currentState: this.agent.state,
-      queueEvent: event,
-      greeting: this.agent.greeting,
-      setState: this.agent.setState,
-      generate: this.agent.generate,
-      cancelGeneration: this.agent.cancel,
-      cancelSynthesis: this.synthesizer.restart,
-      appendTranscript: this.appendTranscript,
-    });
-  }
-
-  private appendMessage(message: Message) {
-    if (this.messages.length === 0) {
-      log(`Appending message: ${JSON.stringify(message)}`);
-      this.messages.push(message);
-      return;
-    }
-
-    const prev = this.messages[this.messages.length - 1];
-    const sameRole = message.role === prev.role;
-    if (sameRole) {
-      const delta = MESSAGE_TIMESTAMP_DELTA;
-      const sameUtterance = !prev.end || message.start - prev.end <= delta;
-      if (sameUtterance) {
-        prev.content += ` ${message.content}`;
-        prev.end = message.end;
-        return;
-      }
-    }
-
-    log(`Appending message: ${JSON.stringify(message)}`);
-    this.messages.push(message);
   }
 
   private appendTranscript(transcript: Transcript) {
-    const message: Message = {
-      role: Role.USER,
-      content: transcript.speech,
-      start: transcript.start,
-      end: transcript.end,
-    };
+    const { speech: content, start, end } = transcript;
+    const role = Role.USER;
+    const message: Message = { role, content, start, end };
+    this.agent.appendMessage(message);
+  }
 
-    this.appendMessage(message);
+  private onTranscriberError(err: Error) {
+    // log(JSON.stringify({ event: Event.TRANSCRIBER_ERROR }));
+  }
+
+  private onTranscriberFatal() {
+    // log(JSON.stringify({ event: Event.TRANSCRIBER_FATAL }));
   }
 
   private endCall() {
@@ -237,28 +99,21 @@ export class Call extends EventEmitter {
       this.socket.close();
     }
 
-    CallService.endCall(this.id, {
-      start: this.start,
-      end: this.end,
-      messages: this.messages,
-    })
-      .then(() => {
-        log('Call ended successfully');
+    log(
+      JSON.stringify({
+        start: this.start,
+        end: this.end,
+        messages: this.agent.messages,
       })
-      .catch((err) => {
-        log('Failed to end call');
-        captureException(err);
-      })
-      .finally(() => {
-        this.destroy();
-      });
+    );
+
+    this.destroy();
   }
 
   public destroy() {
     log(`Destroying call`);
     this.transcriber.destroy();
     this.agent.destroy();
-    this.synthesizer.destroy();
     this.removeAllListeners();
   }
 }

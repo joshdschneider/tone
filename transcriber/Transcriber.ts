@@ -4,18 +4,11 @@ import {
   LiveTranscriptionOptions,
   LiveTranscriptionResponse,
 } from '@deepgram/sdk/dist/types';
-import { EventEmitter } from 'ws';
+import { EventEmitter } from 'events';
 import { captureException } from '../helpers/captureException';
 import { Transcript } from '../types';
 import { deepgram } from '../utils/deepgram';
 import { LogLevel, log } from '../utils/log';
-
-export declare enum ConnectionState {
-  CONNECTING = 0,
-  OPEN = 1,
-  CLOSING = 2,
-  CLOSED = 3,
-}
 
 export class Transcriber extends EventEmitter {
   private options: LiveTranscriptionOptions;
@@ -39,11 +32,12 @@ export class Transcriber extends EventEmitter {
   private bindConnectionListeners() {
     if (this.connection) {
       this.connection.on('open', this.handleConnectionOpen.bind(this));
-      this.connection.on('close', this.handleConnectionClose.bind(this));
       this.connection.on('transcriptReceived', this.handleTranscript.bind(this));
+      this.connection.on('close', this.handleConnectionClose.bind(this));
       this.connection.on('error', this.handleError.bind(this));
     } else {
-      log(`Failed to bind transcriber listeners`, LogLevel.WARN);
+      const err = new Error('Failed to bind listeners to transcriber');
+      this.handleError(err);
     }
   }
 
@@ -51,17 +45,11 @@ export class Transcriber extends EventEmitter {
     log(`Transcriber connection open`);
   }
 
-  private handleConnectionClose() {
-    log(`Transcriber connection closed`);
-  }
-
-  private handleError(err: Error) {
-    captureException(err);
-    this.errorCount++;
-    if (this.errorCount >= this.maxErrors) {
-      this.emit('fatal');
+  public send(audio: Buffer) {
+    if (this.connection && this.connection.getReadyState() === 1) {
+      this.connection.send(audio);
     } else {
-      this.emit('error', err);
+      log(`Transcriber not ready`, LogLevel.WARN);
     }
   }
 
@@ -74,6 +62,10 @@ export class Transcriber extends EventEmitter {
       alternative = response.channel.alternatives[0];
     } catch (err: any) {
       this.handleError(err);
+      return;
+    }
+
+    if (!alternative.transcript) {
       return;
     }
 
@@ -92,18 +84,17 @@ export class Transcriber extends EventEmitter {
     this.emit('transcript', transcript);
   }
 
-  public send(audio: Buffer) {
-    if (!this.connection) {
-      const err = new Error('Transcriber connection undefined');
-      this.handleError(err);
-      return;
-    }
+  private handleConnectionClose() {
+    log(`Transcriber connection closed`);
+  }
 
-    const state = this.connection.getReadyState();
-    if (state === ConnectionState.OPEN) {
-      this.connection.send(audio);
+  private handleError(err: any) {
+    captureException(err);
+    this.errorCount++;
+    if (this.errorCount >= this.maxErrors) {
+      this.emit('fatal');
     } else {
-      log(`Transcriber not ready`, LogLevel.WARN);
+      this.emit('error', err);
     }
   }
 
@@ -116,8 +107,7 @@ export class Transcriber extends EventEmitter {
   public close() {
     log(`Closing transcriber connection`);
     if (this.connection) {
-      const state = this.connection.getReadyState();
-      if (state !== ConnectionState.CLOSED) {
+      if (this.connection.getReadyState() !== 3) {
         this.connection.finish();
       }
 

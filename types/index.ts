@@ -7,12 +7,23 @@ export enum VoiceProvider {
   ELEVENLABS = 'ELEVENLABS',
 }
 
+export type CallConfiguration = {
+  direction: CallDirection;
+  agent: Agent;
+  functions: ActionFunction[];
+};
+
 export type Transcript = {
   speech: string;
   start: number;
   end: number;
   isFinal: boolean;
   isEndpoint: boolean;
+};
+
+export type SpeechChunk = {
+  audio: Buffer;
+  text?: string;
 };
 
 export type ConnectionEvent = {
@@ -26,48 +37,50 @@ export type DefaultError = {
   error: string;
 };
 
-export type AgentConfiguration = {
+export type Agent = {
   id: string;
-  direction: CallDirection;
+  organization_id: string;
+  number_id: string | null;
+  name: string;
+  active: boolean;
+  inbound_enabled: boolean;
+  outbound_enabled: boolean;
   prompt: string | null;
   greeting: string | null;
   voicemail: string | null;
-  voiceProvider: VoiceProvider;
-  voiceId: string;
-  functions: string | null;
   language: string | null;
   keywords: string | null;
+  voice_provider: VoiceProvider;
+  voice_options: VoiceOptions;
+  created_at: Date;
+  updated_at: Date;
+  deleted_At: Date | null;
 };
+
+export type ElevenLabsOptions = {
+  id: string;
+  name: string;
+  stability?: number;
+  similarity_boost?: number;
+};
+
+export type VoiceOptions = ElevenLabsOptions; // Mutex based on provider
 
 export enum AgentState {
   IDLE = 'IDLE',
   LISTENING = 'LISTENING',
-  PROCESSING = 'PROCESSING',
   SPEAKING = 'SPEAKING',
 }
 
-export enum Event {
+export enum CallEvent {
   CALL_CONNECTED_INBOUND = 'CALL_CONNECTED_INBOUND',
   CALL_CONNECTED_OUTBOUND = 'CALL_CONNECTED_OUTBOUND',
   TRANSCRIPT_PARTIAL = 'TRANSCRIPT_PARTIAL',
   TRANSCRIPT_FULL = 'TRANSCRIPT_FULL',
   TRANSCRIPT_ENDPOINT = 'TRANSCRIPT_ENDPOINT',
-  TRANSCRIBER_ERROR = 'TRANSCRIBER_ERROR',
-  TRANSCRIBER_FATAL = 'TRANSCRIBER_FATAL',
-  GENERATION_STARTED = 'GENERATION_STARTED',
-  GENERATION_ENDED = 'GENERATION_ENDED',
-  GENERATION_ERROR = 'GENERATION_ERROR',
-  GENERATION_FATAL = 'GENERATION_FATAL',
-  SYNTHESIS_STARTED = 'SYNTHESIS_STARTED',
-  SYNTHESIS_ENDED = 'SYNTHESIS_ENDED',
-  SYNTHESIS_ERROR = 'SYNTHESIS_ERROR',
-  SYNTHESIS_FATAL = 'SYNTHESIS_FATAL',
+  GREETING_ENDED = 'GREETING_ENDED',
+  RESPONSE_ENDED = 'RESPONSE_ENDED',
 }
-
-export type QueueEvent = {
-  event: Event;
-  payload?: any;
-};
 
 export interface OpenAIBaseMessage {
   role: Role;
@@ -93,8 +106,8 @@ export interface OpenAIFunction {
   };
 }
 
-export type Fn = OpenAIFunction & {
-  actionId: string;
+export type ActionFunction = OpenAIFunction & {
+  action_id: string;
 };
 
 export interface ContentMessage extends OpenAIBaseMessage {
@@ -123,9 +136,3 @@ export type Message = {
   start: number;
   end?: number;
 } & OpenAIMessage;
-
-export enum GenerationType {
-  GREETING = 'GREETING',
-  RECOVERY = 'RECOVERY',
-  RESPONSE = 'RESPONSE',
-}

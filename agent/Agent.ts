@@ -1,30 +1,56 @@
-import { EventEmitter } from 'stream';
+import { EventEmitter } from 'events';
 import { captureException } from '../helpers/captureException';
-import { getOpenAICompletion } from '../helpers/getOpenAICompletion';
-import { AgentState, GenerationType, Message, OpenAIMessage, Role } from '../types';
-import { RECOVERY_MESSAGE } from '../utils/constants';
+import { Speech } from '../speech/Speech';
+import { createGreeting } from '../speech/createGreeting';
+import { createResponse } from '../speech/createResponse';
+import { StateMachine } from '../stateMachine/StateMachine';
+import { createStateMachine } from '../stateMachine/createStateMachine';
+import {
+  ActionFunction,
+  AgentState,
+  CallEvent,
+  Message,
+  SpeechChunk,
+  VoiceOptions,
+  VoiceProvider,
+} from '../types';
+import { MESSAGE_TIMESTAMP_DELTA } from '../utils/constants';
 import { log } from '../utils/log';
 
 export type AgentConstructor = {
   id: string;
-  prompt: string;
-  greeting: string;
+  prompt?: string;
+  greeting?: string;
   voicemail?: string;
-  functions?: string;
+  functions?: ActionFunction[];
+  voiceProvider?: VoiceProvider;
+  voiceOptions?: VoiceOptions;
 };
 
 export class Agent extends EventEmitter {
   public state: AgentState;
   private id: string;
-  private prompt: string;
-  public greeting: string;
+  private prompt?: string;
+  private greeting?: string;
   private voicemail?: string;
-  private functions?: string;
-  private controller: AbortController;
-  private errorCount: number;
-  private maxErrors: number;
+  private functions?: ActionFunction[];
+  private voiceProvider?: VoiceProvider;
+  private voiceOptions?: VoiceOptions;
+  public messages: Message[];
+  private queue: CallEvent[];
+  private isProcessing: boolean;
+  private machine: StateMachine;
+  private speech?: Speech;
 
-  constructor({ id, prompt, greeting, voicemail, functions }: AgentConstructor) {
+  constructor({
+    id,
+    prompt,
+    greeting,
+    voicemail,
+    functions,
+    voiceProvider,
+    voiceOptions,
+  }: AgentConstructor) {
     super();
     this.state = AgentState.IDLE;
     this.id = id;
@@ -32,81 +58,121 @@ export class Agent extends EventEmitter {
     this.greeting = greeting;
     this.voicemail = voicemail;
     this.functions = functions;
-    this.controller = new AbortController();
-    this.errorCount = 0;
-    this.maxErrors = 3;
+    this.messages = [];
+    this.queue = [];
+    this.isProcessing = false;
+    this.machine = createStateMachine({
+      setState: (state: AgentState) => this.setState(state),
+      hasGreeting: !!this.greeting,
+      greet: () => this.greet(),
+      respond: () => this.respond(),
+      abort: () => this.abort(),
+    });
   }
 
-  public setState(state: AgentState): void {
+  public enqueue(event: CallEvent) {
+    log(`Enqueueing event: ${event}`);
+    this.queue.push(event);
+    if (!this.isProcessing) {
+      this.dequeue();
+    }
+  }
+
+  private dequeue() {
+    log(`Dequeueing event`);
+    if (this.queue.length === 0) {
+      log(`Stopping queue`);
+      this.isProcessing = false;
+      return;
+    }
+
+    this.isProcessing = true;
+    const event = this.queue.shift();
+    if (event) {
+      this.process(event);
+      this.dequeue();
+    }
+  }
+
+  private process(event: CallEvent) {
+    try {
+      log(`Processing event: ${event}`);
+      this.machine.transition(this.state, event);
+    } catch (err: any) {
+      captureException(err);
+    }
+  }
+
+  private setState(state: AgentState): void {
     if (this.state !== state) {
       log(`Updating state: ${this.state} => ${state}`);
       this.state = state;
     }
   }
 
-  public generate(messages: Message[], type?: GenerationType) {
-    switch (type) {
-      case GenerationType.GREETING:
-        this.emit('text', this.greeting);
-        return;
-      case GenerationType.RECOVERY:
-        this.emit('text', RECOVERY_MESSAGE);
-        return;
-      default:
-        getOpenAICompletion({
-          messages: this.formatMessages(messages),
-          // functions: this.formatFunctions(this.functions),
-          signal: this.controller.signal,
-        })
-          .then((stream) =>
-            this.handleStream(stream)
-              .then(() => null)
-              .catch((err) => this.handleError(err))
-          )
-          .catch((err) => this.handleError(err));
+  public appendMessage(message: Message) {
+    if (this.messages.length === 0) {
+      log(`Appending message: ${JSON.stringify(message)}`);
+      this.messages.push(message);
+      return;
     }
+
+    const prev = this.messages[this.messages.length - 1];
+    const sameRole = message.role === prev.role;
+    if (sameRole) {
+      const delta = MESSAGE_TIMESTAMP_DELTA;
+      const sameUtterance = !prev.end || message.start - prev.end <= delta;
+      if (sameUtterance) {
+        log(`Appending partial message: ${message.content}`);
+        prev.content += ` ${message.content}`;
+        prev.end = message.end;
+        return;
+      }
+    }
+
+    log(`Appending message: ${JSON.stringify(message)}`);
+    this.messages.push(message);
   }
 
-  private async handleStream(stream: ReadableStream) {
-    const reader = stream.getReader();
-    const decoder = new TextDecoder();
-
-    let done = false;
-    let chunks = '';
-
-    while (!done) {
-      const { value, done: doneReading } = await reader.read();
-      done = doneReading;
-      const chunkValue = decoder.decode(value);
-      chunks += chunkValue;
-    }
-  }
-
-  private formatMessages(messages: Message[]): OpenAIMessage[] {
-    const formatted: OpenAIMessage[] = messages.map((message) => {
-      const { start, end, ...rest } = message;
-      return { ...rest };
+  private greet() {
+    log('Creating greeting');
+    this.speech = createGreeting({
+      greeting: this.greeting,
+      agentId: this.id,
+      voiceProvider: this.voiceProvider,
+      voiceOptions: this.voiceOptions,
     });
 
-    formatted.unshift({ role: Role.SYSTEM, content: this.prompt });
-    return formatted;
+    this.speech.on('chunk', (chunk) => this.handleSpeechChunk(chunk));
   }
 
-  private handleError(err: any) {
-    captureException(err);
-    this.errorCount++;
-    if (this.errorCount >= this.maxErrors) {
-      this.emit('fatal');
-    } else {
-      this.emit('error', err);
+  private respond() {
+    log('Creating response');
+    this.speech = createResponse({
+      messages: this.messages,
+      voiceProvider: this.voiceProvider,
+      voiceOptions: this.voiceOptions,
+    });
+
+    this.speech.on('chunk', (chunk) => this.handleSpeechChunk(chunk));
+  }
+
+  private handleSpeechChunk(chunk: SpeechChunk) {
+    log(JSON.stringify(chunk));
+  }
+
+  private abort() {
+    if (this.speech) {
+      log('Aborting speech');
+      this.speech.destroy();
+      this.speech.removeAllListeners();
+      this.speech = undefined;
     }
-  }
-
-  public cancel() {
-    // TODO
   }
 
   public destroy() {
-    // TODO
+    log(`Destroying agent`);
+    this.abort();
+    this.removeAllListeners();
   }
 }

@@ -13,11 +13,11 @@ type GetOpenAICompletionRequest = {
   signal: AbortSignal;
 };
 
-export const getOpenAICompletion = async ({
+export async function getOpenAICompletion({
   messages,
   functions,
   signal,
-}: GetOpenAICompletionRequest) => {
+}: GetOpenAICompletionRequest) {
   const res = await fetch(URL, {
     headers: {
       'Content-Type': 'application/json',
@@ -83,4 +83,4 @@ export const getOpenAICompletion = async ({
   });
 
   return readableStream;
-};
+}

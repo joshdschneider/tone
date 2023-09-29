@@ -1,28 +1,30 @@
-import { VoiceProvider } from '../types';
-import { Synthesizer } from './Synthesizer';
+import { VoiceOptions, VoiceProvider } from '../types';
+import { createElevenLabsSynthesizer } from './createElevenLabsSynthesizer';
 
 export type CreateSynthesizerProps = {
-  provider: VoiceProvider;
-  voiceId: string;
-  language?: string;
+  voiceProvider?: VoiceProvider;
+  voiceOptions?: VoiceOptions;
 };
 
-export enum ElevenLabsModel {
-  MULTILINGUAL_V2 = 'eleven_multilingual_v2',
-  MULTILINGUAL_V1 = 'eleven_multilingual_v1',
-  ENGLISH_V1 = 'eleven_monolingual_v1',
-}
-
-export function createSynthesizer({ provider, voiceId, language }: CreateSynthesizerProps) {
-  const english = !language || language === 'en-US';
-  const model = english ? ElevenLabsModel.ENGLISH_V1 : ElevenLabsModel.MULTILINGUAL_V1;
-
-  return new Synthesizer({
-    provider,
-    model,
-    voiceId,
+const DEFAULT = {
+  provider: VoiceProvider.ELEVENLABS,
+  options: {
+    id: 'EXAVITQu4vr4xnSDxMaL',
+    name: 'Bella',
     stability: 0.9,
-    similarityBoost: 0.75,
-    optimizeStreamingLatency: 2,
-  });
+    similarity_boost: 0.75,
+  },
+};
+
+export function createSynthesizer({ voiceProvider, voiceOptions }: CreateSynthesizerProps) {
+  const provider = voiceProvider || DEFAULT.provider;
+  const options = voiceOptions || DEFAULT.options;
+
+  switch (provider) {
+    case VoiceProvider.ELEVENLABS:
+      return createElevenLabsSynthesizer(options);
+
+    default:
+      throw new Error(`Voice provider ${voiceProvider} not supported`);
+  }
 }

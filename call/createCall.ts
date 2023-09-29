@@ -1,11 +1,8 @@
 import WebSocket from 'ws';
 import { createAgent } from '../agent/createAgent';
-import { captureException } from '../helpers/captureException';
 import CallService from '../services/CallService';
-import { createSynthesizer } from '../synthesizer/createSynthesizer';
 import { createTranscriber } from '../transcriber/createTranscriber';
-import { AgentConfiguration, ConnectionEvent } from '../types';
-import { DEFAULT_GREETING, DEFAULT_PROMPT } from '../utils/constants';
+import { CallConfiguration, ConnectionEvent } from '../types';
 import { log } from '../utils/log';
 import { Call } from './Call';
 
@@ -15,58 +12,56 @@ export type CreateCallProps = {
 };
 
 export async function createCall({ socket, data }: CreateCallProps) {
-  const { event, ['content-type']: _, id } = data;
-  let config: AgentConfiguration;
+  const { event, ['content-type']: _, id: callId } = data;
+  let config: CallConfiguration;
 
   try {
-    const response = await CallService.startCall(id);
-    config = response.agentConfiguration;
+    const response = await CallService.getCallConfig(callId);
+    config = response.config;
   } catch (err) {
-    captureException(err);
-    socket.close();
-    return;
+    throw err;
   }
 
   log(`Creating call with config: ${JSON.stringify(config)}`);
 
+  const { direction, functions } = config;
   const {
     id: agentId,
-    direction,
     prompt,
     greeting,
     voicemail,
-    voiceProvider,
-    voiceId,
-    functions,
     language,
     keywords,
-  } = config;
+    voice_provider,
+    voice_options,
+  } = config.agent;
 
   const transcriber = createTranscriber({
-    keywords: keywords ? keywords.split(' ') : undefined,
+    keywords: keywords || undefined,
     language: language || undefined,
   });
 
-  const synthesizer = createSynthesizer({
-    provider: voiceProvider,
-    voiceId,
-    language: language || undefined,
-  });
+  // const synthesizer = createSynthesizer({
+  //   provider: voiceProvider,
+  //   voiceId,
+  //   language: language || undefined,
+  // });
 
   const agent = createAgent({
     id: agentId,
-    prompt: prompt || DEFAULT_PROMPT,
-    greeting: greeting || DEFAULT_GREETING,
+    prompt: prompt || undefined,
+    greeting: greeting || undefined,
     voicemail: voicemail || undefined,
-    functions: functions || undefined,
+    functions: functions.length > 0 ? functions : undefined,
+    voiceProvider: voice_provider || undefined,
+    voiceOptions: voice_options || undefined,
   });
 
   return new Call({
     socket,
-    id,
+    id: callId,
     direction,
     transcriber,
     agent,
-    synthesizer,
   });
 }
