@@ -7,17 +7,17 @@ const URL = `${BASE_URL}/chat/completions`;
 const DEFAULT_MODEL = 'gpt-3.5-turbo-0613';
 const DEFAULT_TEMPERATURE = 0.5;
 
-type GetOpenAICompletionRequest = {
+type GenerateCompletionRequest = {
   messages: OpenAIMessage[];
   functions?: OpenAIFunction[];
   signal: AbortSignal;
 };
 
-export async function getOpenAICompletion({
+export async function generateCompletion({
   messages,
   functions,
   signal,
-}: GetOpenAICompletionRequest) {
+}: GenerateCompletionRequest) {
   const res = await fetch(URL, {
     headers: {
       'Content-Type': 'application/json',
@@ -57,20 +57,8 @@ export async function getOpenAICompletion({
 
           if ('data' in event) {
             const data = event.data;
-            try {
-              const json = JSON.parse(data);
-              const delta = json.choices[0].delta;
-              if ('function_call' in delta) {
-                const functionCall = JSON.stringify(delta);
-                const queue = encoder.encode(functionCall);
-                controller.enqueue(queue);
-              } else {
-                const queue = encoder.encode(delta.content);
-                controller.enqueue(queue);
-              }
-            } catch (error) {
-              controller.error(error);
-            }
+            const queue = encoder.encode(data);
+            controller.enqueue(queue);
           }
         }
       };

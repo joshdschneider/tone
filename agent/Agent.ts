@@ -10,12 +10,13 @@ import {
   AgentState,
   CallEvent,
   Message,
+  Role,
   SpeechChunk,
   VoiceOptions,
   VoiceProvider,
 } from '../types';
 import { MESSAGE_TIMESTAMP_DELTA } from '../utils/constants';
-import { log } from '../utils/log';
+import { LogLevel, log } from '../utils/log';
 
 export type AgentConstructor = {
   id: string;
@@ -58,6 +59,8 @@ export class Agent extends EventEmitter {
     this.greeting = greeting;
     this.voicemail = voicemail;
     this.functions = functions;
+    this.voiceProvider = voiceProvider;
+    this.voiceOptions = voiceOptions;
     this.messages = [];
     this.queue = [];
     this.isProcessing = false;
@@ -144,28 +147,56 @@ export class Agent extends EventEmitter {
     });
 
     this.speech.on('chunk', (chunk) => this.handleSpeechChunk(chunk));
+    this.speech.on('done', () => this.handleSpeechDone());
+    this.speech.on('error', (err) => this.handleSpeechError(err));
   }
 
   private respond() {
     log('Creating response');
     this.speech = createResponse({
       messages: this.messages,
+      prompt: this.prompt,
+      functions: this.functions,
       voiceProvider: this.voiceProvider,
       voiceOptions: this.voiceOptions,
     });
 
     this.speech.on('chunk', (chunk) => this.handleSpeechChunk(chunk));
+    this.speech.on('done', () => this.handleSpeechDone());
+    this.speech.on('error', (err) => this.handleSpeechError(err));
   }
 
   private handleSpeechChunk(chunk: SpeechChunk) {
-    log(JSON.stringify(chunk));
+    if (this.state === AgentState.SPEAKING) {
+      log('Speech chunk received');
+      if (chunk.text) {
+        this.appendMessage({
+          role: Role.ASSISTANT,
+          content: chunk.text,
+          start: chunk.start,
+          end: chunk.end,
+        });
+      }
+      this.emit('speech', chunk.audio);
+    } else {
+      log(`Speech chunk received in state ${this.state}`, LogLevel.WARN);
+    }
+  }
+
+  private handleSpeechDone() {
+    log('Enqueueing speech ended');
+    this.enqueue(CallEvent.SPEECH_ENDED);
+  }
+
+  private handleSpeechError(err: any) {
+    log('Enqueueing speech error');
+    this.enqueue(CallEvent.SPEECH_ERROR);
   }
 
   private abort() {
     if (this.speech) {
       log('Aborting speech');
       this.speech.destroy();
-      this.speech.removeAllListeners();
       this.speech = undefined;
     }
   }
@@ -173,6 +204,8 @@ export class Agent extends EventEmitter {
   public destroy() {
     log(`Destroying agent`);
     this.abort();
+    this.queue.length = 0;
+    this.isProcessing = false;
     this.removeAllListeners();
   }
 }

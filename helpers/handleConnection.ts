@@ -42,7 +42,10 @@ export function handleConnection(socket: WebSocket.WebSocket) {
     }
   });
 
-  socket.on('error', captureException);
+  socket.on('error', (err) => {
+    captureException(err);
+    socket.close();
+  });
 
   socket.on('close', (code: number) => {
     log(`Socket closed with code ${code}`);

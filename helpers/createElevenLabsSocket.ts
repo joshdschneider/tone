@@ -1,10 +1,8 @@
 import { WebSocket } from 'ws';
-import { ElevenLabsModel } from '../synthesizer/createSynthesizer';
+import { ElevenLabsModel } from '../synthesizer/ElevenLabsSynthesizer';
 import { log } from '../utils/log';
 
-const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY as string;
-
-type CreateXISocketProps = {
+type CreateElevenLabsSocketProps = {
   model: ElevenLabsModel;
   voiceId: string;
   stability: number;
@@ -12,16 +10,18 @@ type CreateXISocketProps = {
   optimizeStreamingLatency: number;
 };
 
-export function createXISocket({
+export function createElevenLabsSocket({
   model,
   voiceId,
   stability,
   similarityBoost,
   optimizeStreamingLatency,
-}: CreateXISocketProps) {
-  const BASE_URL = `wss://api.elevenlabs.io/v1/text-to-speech`;
-  const URL = `${BASE_URL}/${voiceId}/stream-input?model_id=${model}&optimize_streaming_latency=${optimizeStreamingLatency.toString()}`;
-  const socket = new WebSocket(URL);
+}: CreateElevenLabsSocketProps) {
+  const API_KEY = process.env.ELEVENLABS_API_KEY as string;
+  const BASE_URL = 'wss://api.elevenlabs.io/v1/text-to-speech';
+  const URL = `${BASE_URL}/${voiceId}/stream-input`;
+  const PARAMS = `?model_id=${model}&optimize_streaming_latency=${optimizeStreamingLatency}`;
+  const socket = new WebSocket(URL + PARAMS);
 
   socket.onopen = function (event) {
     const bosMessage = {
@@ -30,7 +30,7 @@ export function createXISocket({
         stability: stability,
         similarity_boost: similarityBoost,
       },
-      xi_api_key: elevenLabsApiKey,
+      xi_api_key: API_KEY,
     };
 
     socket.send(JSON.stringify(bosMessage));

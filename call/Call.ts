@@ -26,19 +26,14 @@ export class Call extends EventEmitter {
   constructor({ socket, id, direction, transcriber, agent }: CallConstructor) {
     super();
     this.socket = socket;
+    this.socket.on('close', () => this.onSocketClose());
     this.id = id;
     this.direction = direction;
     this.transcriber = transcriber;
-    this.agent = agent;
-    this.start = now();
-    this.bindCallListeners();
-  }
-
-  private bindCallListeners() {
-    this.socket.on('close', () => this.onSocketClose());
     this.transcriber.on('transcript', (transcript: Transcript) => this.onTranscript(transcript));
     this.transcriber.on('error', (err: any) => this.onTranscriberError(err));
-    this.transcriber.on('fatal', () => this.onTranscriberFatal());
+    this.agent = agent;
+    this.start = now();
   }
 
   public processAudio(buffer: Buffer) {
@@ -85,11 +80,8 @@ export class Call extends EventEmitter {
   }
 
   private onTranscriberError(err: Error) {
-    // log(JSON.stringify({ event: Event.TRANSCRIBER_ERROR }));
-  }
-
-  private onTranscriberFatal() {
-    // log(JSON.stringify({ event: Event.TRANSCRIBER_FATAL }));
+    log('Transcriber failed: ending call');
+    this.endCall();
   }
 
   private endCall() {

@@ -41,12 +41,6 @@ export async function createCall({ socket, data }: CreateCallProps) {
     language: language || undefined,
   });
 
-  // const synthesizer = createSynthesizer({
-  //   provider: voiceProvider,
-  //   voiceId,
-  //   language: language || undefined,
-  // });
-
   const agent = createAgent({
     id: agentId,
     prompt: prompt || undefined,

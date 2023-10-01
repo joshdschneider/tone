@@ -2,11 +2,11 @@ import { ElevenLabsOptions } from '../types';
 import { log } from '../utils/log';
 import { SynthesisOptions, Synthesizer } from './Synthesizer';
 
-// export enum ElevenLabsModel {
-//   MULTILINGUAL_V2 = 'eleven_multilingual_v2',
-//   MULTILINGUAL_V1 = 'eleven_multilingual_v1',
-//   ENGLISH_V1 = 'eleven_monolingual_v1',
-// }
+export enum ElevenLabsModel {
+  MULTILINGUAL_V2 = 'eleven_multilingual_v2',
+  MULTILINGUAL_V1 = 'eleven_multilingual_v1',
+  ENGLISH_V1 = 'eleven_monolingual_v1',
+}
 //   const english = !language || language === 'en-US';
 //   const model = english ? ElevenLabsModel.ENGLISH_V1 : ElevenLabsModel.MULTILINGUAL_V1;
 

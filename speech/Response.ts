@@ -1,22 +1,33 @@
 import { Split } from '../generator/Generator';
 import { createGenerator } from '../generator/createGenerator';
-import { Message } from '../types';
+import { ActionFunction, Message } from '../types';
 import { log } from '../utils/log';
 import { Speech, SpeechConstructor } from './Speech';
 
 export type ResponseConstructor = {
   messages: Message[];
+  prompt?: string;
+  functions?: ActionFunction[];
   split?: Split;
 } & SpeechConstructor;
 
 export class Response extends Speech {
   private generator;
 
-  constructor({ messages, split, voiceProvider, voiceOptions }: ResponseConstructor) {
+  constructor({
+    messages,
+    prompt,
+    functions,
+    split,
+    voiceProvider,
+    voiceOptions,
+  }: ResponseConstructor) {
     super({ voiceProvider, voiceOptions });
-    this.generator = createGenerator({ messages, split });
+    this.generator = createGenerator({ messages, prompt, functions, split });
     this.generator.on('text', (text) => this.handleText(text));
-    this.generator.on('function_call', (payload) => this.handleFunctionCall(payload));
+    this.generator.on('function_call', (func) => this.handleFunctionCall(func));
+    this.generator.on('done', () => this.handleGeneratorDone());
+    this.generator.on('error', (err) => this.handleError(err));
     this.generator.generate();
   }
 
@@ -24,8 +35,12 @@ export class Response extends Speech {
     this.synthesize(text);
   }
 
-  private handleFunctionCall(fn: any) {
-    // ..
+  private handleFunctionCall(func: ActionFunction) {
+    log('Function call generated');
+  }
+
+  private handleGeneratorDone() {
+    log('Generator done');
   }
 
   public destroy(): void {

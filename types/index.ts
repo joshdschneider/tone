@@ -21,10 +21,15 @@ export type Transcript = {
   isEndpoint: boolean;
 };
 
-export type SpeechChunk = {
+export type SynthesisChunk = {
   audio: Buffer;
   text?: string;
 };
+
+export type SpeechChunk = {
+  start: number;
+  end: number;
+} & SynthesisChunk;
 
 export type ConnectionEvent = {
   event: string;
@@ -78,8 +83,8 @@ export enum CallEvent {
   TRANSCRIPT_PARTIAL = 'TRANSCRIPT_PARTIAL',
   TRANSCRIPT_FULL = 'TRANSCRIPT_FULL',
   TRANSCRIPT_ENDPOINT = 'TRANSCRIPT_ENDPOINT',
-  GREETING_ENDED = 'GREETING_ENDED',
-  RESPONSE_ENDED = 'RESPONSE_ENDED',
+  SPEECH_ENDED = 'SPEECH_ENDED',
+  SPEECH_ERROR = 'SPEECH_ERROR',
 }
 
 export interface OpenAIBaseMessage {
