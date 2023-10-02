@@ -1,3 +1,5 @@
+import { Split } from '../generator/Generator';
+
 export enum CallDirection {
   OUTBOUND = 'OUTBOUND',
   INBOUND = 'INBOUND',
@@ -21,15 +23,26 @@ export type Transcript = {
   isEndpoint: boolean;
 };
 
+export type TextChunk = {
+  text: string;
+  split: Split;
+  isFinal: boolean;
+};
+
 export type SynthesisChunk = {
   audio: Buffer;
   text?: string;
+  isFinal: boolean;
 };
 
 export type SpeechChunk = {
   start: number;
   end: number;
 } & SynthesisChunk;
+
+export type CacheOptions = {
+  key: string;
+};
 
 export type ConnectionEvent = {
   event: string;

@@ -85,6 +85,9 @@ export class Generator extends EventEmitter {
     let name = '';
     let args = '';
 
+    let firstChunkParsed = false;
+    let responseType = ResponseType.TEXT;
+
     while (!done) {
       const { value, done: doneReading } = await reader.read();
       done = doneReading;
@@ -92,6 +95,11 @@ export class Generator extends EventEmitter {
       const response = this.parseChunk(chunk);
       if (!response) {
         continue;
+      }
+
+      if (!firstChunkParsed) {
+        responseType = response.type;
+        firstChunkParsed = true;
       }
 
       if (response.type === ResponseType.FUNCTION_CALL) {
@@ -113,6 +121,7 @@ export class Generator extends EventEmitter {
               this.emit('text', {
                 text: word + ' ',
                 split: this.split,
+                isFinal: false,
               });
             }
           }
@@ -126,24 +135,24 @@ export class Generator extends EventEmitter {
             this.emit('text', {
               text: sentence + ' ',
               split: this.split,
+              isFinal: false,
             });
           }
         }
       }
     }
 
-    if (chunks) {
-      this.emit('text', {
-        text: chunks,
-        split: this.split,
-      });
-    }
-
-    if (name && args) {
+    if (responseType === ResponseType.FUNCTION_CALL) {
       const parsedArgs = JSON.parse(args);
       this.emit('functionCall', {
         name,
         args: parsedArgs,
+      });
+    } else {
+      this.emit('text', {
+        text: chunks,
+        split: this.split,
+        isFinal: true,
       });
     }
   }
@@ -181,6 +190,7 @@ export class Generator extends EventEmitter {
       this.controller.abort();
       this.controller = undefined;
     }
+
     this.removeAllListeners();
   }
 }

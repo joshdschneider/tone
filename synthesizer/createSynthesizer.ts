@@ -4,25 +4,21 @@ import { createElevenLabsSynthesizer } from './createElevenLabsSynthesizer';
 export type CreateSynthesizerProps = {
   voiceProvider?: VoiceProvider;
   voiceOptions?: VoiceOptions;
+  language?: string;
 };
 
-const DEFAULT = {
-  provider: VoiceProvider.ELEVENLABS,
-  options: {
-    id: 'EXAVITQu4vr4xnSDxMaL',
-    name: 'Bella',
-    stability: 0.9,
-    similarity_boost: 0.75,
-  },
-};
+const DEFAULT_VOICE_PROVIDER = VoiceProvider.ELEVENLABS;
 
-export function createSynthesizer({ voiceProvider, voiceOptions }: CreateSynthesizerProps) {
-  const provider = voiceProvider || DEFAULT.provider;
-  const options = voiceOptions || DEFAULT.options;
+export function createSynthesizer({
+  voiceProvider,
+  voiceOptions,
+  language,
+}: CreateSynthesizerProps) {
+  const provider = voiceProvider || DEFAULT_VOICE_PROVIDER;
 
   switch (provider) {
     case VoiceProvider.ELEVENLABS:
-      return createElevenLabsSynthesizer(options);
+      return createElevenLabsSynthesizer({ voiceOptions, language });
 
     default:
       throw new Error(`Voice provider ${voiceProvider} not supported`);

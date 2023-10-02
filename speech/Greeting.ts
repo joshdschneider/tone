@@ -1,3 +1,4 @@
+import { Split } from '../generator/Generator';
 import { DEFAULT_GREETING } from '../utils/constants';
 import { log } from '../utils/log';
 import { Speech, SpeechConstructor } from './Speech';
@@ -8,16 +9,34 @@ export type GreetingConstructor = {
 } & SpeechConstructor;
 
 export class Greeting extends Speech {
-  constructor({ greeting, agentId, voiceOptions, voiceProvider }: GreetingConstructor) {
+  private agentId: string;
+  private greeting?: string;
+
+  constructor({ agentId, greeting, voiceOptions, voiceProvider }: GreetingConstructor) {
     super({ voiceOptions, voiceProvider });
-    if (!greeting) {
+    this.agentId = agentId;
+    this.greeting = greeting;
+    this.synthesizer.on('ready', () => this.onSynthesizerReady());
+  }
+
+  private onSynthesizerReady() {
+    if (!this.greeting) {
       log(`Synthesizing default greeting`);
-      this.synthesize(DEFAULT_GREETING);
+      this.synthesize({
+        text: DEFAULT_GREETING,
+        split: Split.NONE,
+        isFinal: true,
+      });
     } else {
       log(`Synthesizing greeting`);
-      this.synthesize(greeting, {
-        fromCache: true,
-        cacheKey: `greeting:${agentId}`,
+      const chunk = {
+        text: this.greeting,
+        split: Split.NONE,
+        isFinal: true,
+      };
+
+      this.synthesize(chunk, {
+        key: `greeting:${this.agentId}`,
       });
     }
   }

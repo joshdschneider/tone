@@ -49,6 +49,7 @@ export async function createCall({ socket, data }: CreateCallProps) {
     functions: functions.length > 0 ? functions : undefined,
     voiceProvider: voice_provider || undefined,
     voiceOptions: voice_options || undefined,
+    language: language || undefined,
   });
 
   return new Call({

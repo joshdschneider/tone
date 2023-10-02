@@ -1,8 +1,7 @@
 import { WebSocket } from 'ws';
 import { ElevenLabsModel } from '../synthesizer/ElevenLabsSynthesizer';
-import { log } from '../utils/log';
 
-type CreateElevenLabsSocketProps = {
+type OpenElevenLabsSocketProps = {
   model: ElevenLabsModel;
   voiceId: string;
   stability: number;
@@ -10,13 +9,13 @@ type CreateElevenLabsSocketProps = {
   optimizeStreamingLatency: number;
 };
 
-export function createElevenLabsSocket({
+export function openElevenLabsSocket({
   model,
   voiceId,
   stability,
   similarityBoost,
   optimizeStreamingLatency,
-}: CreateElevenLabsSocketProps) {
+}: OpenElevenLabsSocketProps) {
   const API_KEY = process.env.ELEVENLABS_API_KEY as string;
   const BASE_URL = 'wss://api.elevenlabs.io/v1/text-to-speech';
   const URL = `${BASE_URL}/${voiceId}/stream-input`;
@@ -32,9 +31,7 @@ export function createElevenLabsSocket({
       },
       xi_api_key: API_KEY,
     };
-
     socket.send(JSON.stringify(bosMessage));
-    log(`Synthesizer connection open`);
   };
 
   return socket;

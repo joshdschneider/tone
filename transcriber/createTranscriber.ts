@@ -8,8 +8,8 @@ export type TranscriberOptions = {
 
 export function createTranscriber(options: TranscriberOptions) {
   const opts: LiveTranscriptionOptions = {
-    model: 'nova-2-ea',
-    vad_turnoff: 10,
+    model: '2-ea',
+    tier: 'nova',
     punctuate: true,
     endpointing: true,
     interim_results: true,

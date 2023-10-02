@@ -13,6 +13,7 @@ import { LogLevel, log } from '../utils/log';
 export class Transcriber extends EventEmitter {
   private options: LiveTranscriptionOptions;
   private connection?: LiveTranscription;
+  private confidenceThreshold: number;
 
   constructor(options: LiveTranscriptionOptions) {
     super();
@@ -22,6 +23,7 @@ export class Transcriber extends EventEmitter {
     this.connection.on('transcriptReceived', this.handleTranscript.bind(this));
     this.connection.on('close', this.handleConnectionClose.bind(this));
     this.connection.on('error', this.handleError.bind(this));
+    this.confidenceThreshold = 0.8;
   }
 
   private handleConnectionOpen() {
@@ -49,6 +51,8 @@ export class Transcriber extends EventEmitter {
     }
 
     if (!alternative.transcript) {
+      return;
+    } else if (alternative.confidence < this.confidenceThreshold) {
       return;
     }
 

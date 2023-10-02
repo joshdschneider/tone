@@ -1,7 +1,7 @@
 import { Split } from '../generator/Generator';
 import { createGenerator } from '../generator/createGenerator';
-import { ActionFunction, Message } from '../types';
-import { log } from '../utils/log';
+import { ActionFunction, Message, TextChunk } from '../types';
+import { LogLevel, log } from '../utils/log';
 import { Speech, SpeechConstructor } from './Speech';
 
 export type ResponseConstructor = {
@@ -12,7 +12,8 @@ export type ResponseConstructor = {
 } & SpeechConstructor;
 
 export class Response extends Speech {
-  private generator;
+  private generator?;
+  private split?: Split;
 
   constructor({
     messages,
@@ -24,15 +25,15 @@ export class Response extends Speech {
   }: ResponseConstructor) {
     super({ voiceProvider, voiceOptions });
     this.generator = createGenerator({ messages, prompt, functions, split });
-    this.generator.on('text', (text) => this.handleText(text));
-    this.generator.on('function_call', (func) => this.handleFunctionCall(func));
+    this.generator.on('text', (chunk: TextChunk) => this.handleTextChunk(chunk));
+    this.generator.on('function_call', (func: ActionFunction) => this.handleFunctionCall(func));
     this.generator.on('done', () => this.handleGeneratorDone());
-    this.generator.on('error', (err) => this.handleError(err));
+    this.generator.on('error', (err: any) => this.handleGeneratorError(err));
     this.generator.generate();
   }
 
-  private handleText(text: string) {
-    this.synthesize(text);
+  private handleTextChunk(textChunk: TextChunk) {
+    this.synthesize(textChunk);
   }
 
   private handleFunctionCall(func: ActionFunction) {
@@ -41,11 +42,24 @@ export class Response extends Speech {
 
   private handleGeneratorDone() {
     log('Generator done');
+    if (this.generator) {
+      this.generator.destroy();
+      this.generator = undefined;
+    }
+  }
+
+  private handleGeneratorError(err: any) {
+    log('Generator error', LogLevel.ERROR);
+    this.emit('error', err);
   }
 
   public destroy(): void {
     log(`Destroying response`);
-    this.generator.destroy();
+    if (this.generator) {
+      this.generator.destroy();
+      this.generator = undefined;
+    }
+
     super.destroy();
   }
 }

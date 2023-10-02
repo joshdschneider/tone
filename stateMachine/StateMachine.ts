@@ -5,22 +5,36 @@ export type StateMachineConstructor = {
   hasGreeting: boolean;
   greet: () => void;
   respond: () => void;
+  cleanup: () => void;
   abort: () => void;
+  recover: () => void;
 };
 
 export class StateMachine {
-  private setState;
-  private hasGreeting;
-  private greet;
-  private respond;
-  private abort;
+  private setState: (state: AgentState) => void;
+  private hasGreeting: boolean;
+  private greet: () => void;
+  private respond: () => void;
+  private cleanup: () => void;
+  private abort: () => void;
+  private recover: () => void;
 
-  constructor({ setState, hasGreeting, greet, respond, abort }: StateMachineConstructor) {
+  constructor({
+    setState,
+    hasGreeting,
+    greet,
+    respond,
+    cleanup,
+    abort,
+    recover,
+  }: StateMachineConstructor) {
     this.setState = setState;
     this.hasGreeting = hasGreeting;
     this.greet = greet;
     this.respond = respond;
+    this.cleanup = cleanup;
     this.abort = abort;
+    this.recover = recover;
   }
 
   public transition(currentState: AgentState, event: CallEvent) {
@@ -62,10 +76,6 @@ export class StateMachine {
             this.respond();
             return;
 
-          case CallEvent.GREETING_ENDED:
-          case CallEvent.RESPONSE_ENDED:
-            return;
-
           default:
             throw new Error(`Unhandled event ${event} in state ${AgentState.LISTENING}`);
         }
@@ -84,10 +94,15 @@ export class StateMachine {
             this.respond();
             return;
 
-          case CallEvent.GREETING_ENDED:
-          case CallEvent.RESPONSE_ENDED:
+          case CallEvent.SPEECH_ENDED:
+            this.cleanup();
             this.setState(AgentState.LISTENING);
             return;
+
+          case CallEvent.SPEECH_ERROR:
+            this.abort();
+            this.setState(AgentState.SPEAKING);
+            this.recover();
 
           default:
             throw new Error(`Unhandled event ${event} in state ${AgentState.SPEAKING}`);

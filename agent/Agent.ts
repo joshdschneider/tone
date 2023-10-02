@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { captureException } from '../helpers/captureException';
 import { Speech } from '../speech/Speech';
 import { createGreeting } from '../speech/createGreeting';
+import { createRecovery } from '../speech/createRecovery';
 import { createResponse } from '../speech/createResponse';
 import { StateMachine } from '../stateMachine/StateMachine';
 import { createStateMachine } from '../stateMachine/createStateMachine';
@@ -10,8 +11,6 @@ import {
   AgentState,
   CallEvent,
   Message,
-  Role,
-  SpeechChunk,
   VoiceOptions,
   VoiceProvider,
 } from '../types';
@@ -26,6 +25,7 @@ export type AgentConstructor = {
   functions?: ActionFunction[];
   voiceProvider?: VoiceProvider;
   voiceOptions?: VoiceOptions;
+  language?: string;
 };
 
 export class Agent extends EventEmitter {
@@ -37,6 +37,7 @@ export class Agent extends EventEmitter {
   private functions?: ActionFunction[];
   private voiceProvider?: VoiceProvider;
   private voiceOptions?: VoiceOptions;
+  private language?: string;
   public messages: Message[];
   private queue: CallEvent[];
   private isProcessing: boolean;
@@ -51,6 +52,7 @@ export class Agent extends EventEmitter {
     functions,
     voiceProvider,
     voiceOptions,
+    language,
   }: AgentConstructor) {
     super();
     this.state = AgentState.IDLE;
@@ -61,6 +63,7 @@ export class Agent extends EventEmitter {
     this.functions = functions;
     this.voiceProvider = voiceProvider;
     this.voiceOptions = voiceOptions;
+    this.language = language;
     this.messages = [];
     this.queue = [];
     this.isProcessing = false;
@@ -69,8 +72,17 @@ export class Agent extends EventEmitter {
       hasGreeting: !!this.greeting,
       greet: () => this.greet(),
       respond: () => this.respond(),
+      cleanup: () => this.cleanup(),
       abort: () => this.abort(),
+      recover: () => this.recover(),
     });
+  }
+
+  private setState(state: AgentState): void {
+    if (this.state !== state) {
+      log(`Updating state: ${this.state} => ${state}`);
+      this.state = state;
+    }
   }
 
   public enqueue(event: CallEvent) {
@@ -103,13 +115,6 @@ export class Agent extends EventEmitter {
       this.machine.transition(this.state, event);
     } catch (err: any) {
       captureException(err);
-    }
-  }
-
-  private setState(state: AgentState): void {
-    if (this.state !== state) {
-      log(`Updating state: ${this.state} => ${state}`);
-      this.state = state;
     }
   }
 
@@ -146,9 +151,9 @@ export class Agent extends EventEmitter {
       voiceOptions: this.voiceOptions,
     });
 
-    this.speech.on('chunk', (chunk) => this.handleSpeechChunk(chunk));
+    this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
     this.speech.on('done', () => this.handleSpeechDone());
-    this.speech.on('error', (err) => this.handleSpeechError(err));
+    this.speech.on('error', (err: any) => this.handleSpeechError(err));
   }
 
   private respond() {
@@ -161,41 +166,54 @@ export class Agent extends EventEmitter {
       voiceOptions: this.voiceOptions,
     });
 
-    this.speech.on('chunk', (chunk) => this.handleSpeechChunk(chunk));
+    this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
     this.speech.on('done', () => this.handleSpeechDone());
-    this.speech.on('error', (err) => this.handleSpeechError(err));
+    this.speech.on('error', (err: any) => this.handleSpeechError(err));
   }
 
-  private handleSpeechChunk(chunk: SpeechChunk) {
+  private recover() {
+    // TODO: RETRY LOGIC
+    log('Creating recovery');
+    this.speech = createRecovery({
+      language: this.language,
+      voiceOptions: this.voiceOptions,
+      voiceProvider: this.voiceProvider,
+    });
+
+    this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
+    this.speech.on('done', () => this.handleSpeechDone());
+    this.speech.on('error', (err: any) => this.handleSpeechError(err));
+  }
+
+  private handleSpeech(speech: Buffer) {
     if (this.state === AgentState.SPEAKING) {
-      log('Speech chunk received');
-      if (chunk.text) {
-        this.appendMessage({
-          role: Role.ASSISTANT,
-          content: chunk.text,
-          start: chunk.start,
-          end: chunk.end,
-        });
-      }
-      this.emit('speech', chunk.audio);
+      this.emit('speech', speech);
     } else {
-      log(`Speech chunk received in state ${this.state}`, LogLevel.WARN);
+      log(`Failed to emit speech in state ${this.state}`, LogLevel.WARN);
     }
   }
 
   private handleSpeechDone() {
-    log('Enqueueing speech ended');
+    log('Handling speech done');
     this.enqueue(CallEvent.SPEECH_ENDED);
   }
 
   private handleSpeechError(err: any) {
-    log('Enqueueing speech error');
+    log('Handling speech error');
     this.enqueue(CallEvent.SPEECH_ERROR);
   }
 
-  private abort() {
+  private cleanup() {
+    log('Cleaning up speech');
     if (this.speech) {
-      log('Aborting speech');
+      this.speech.destroy();
+      this.speech = undefined;
+    }
+  }
+
+  private abort() {
+    log('Aborting speech');
+    if (this.speech) {
       this.speech.destroy();
       this.speech = undefined;
     }

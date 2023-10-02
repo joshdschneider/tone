@@ -33,6 +33,8 @@ export class Call extends EventEmitter {
     this.transcriber.on('transcript', (transcript: Transcript) => this.onTranscript(transcript));
     this.transcriber.on('error', (err: any) => this.onTranscriberError(err));
     this.agent = agent;
+    this.agent.on('speech', (chunk: Buffer) => this.onAgentSpeech(chunk));
+    this.agent.on('error', (err: any) => this.onAgentError(err));
     this.start = now();
   }
 
@@ -73,6 +75,7 @@ export class Call extends EventEmitter {
   }
 
   private appendTranscript(transcript: Transcript) {
+    log('Appending transcript to messages');
     const { speech: content, start, end } = transcript;
     const role = Role.USER;
     const message: Message = { role, content, start, end };
@@ -80,7 +83,16 @@ export class Call extends EventEmitter {
   }
 
   private onTranscriberError(err: Error) {
-    log('Transcriber failed: ending call');
+    log('Transcriber failed');
+    this.endCall();
+  }
+
+  private onAgentSpeech(chunk: Buffer) {
+    this.socket.send(chunk);
+  }
+
+  private onAgentError(err: Error) {
+    log('Agent failed');
     this.endCall();
   }
 

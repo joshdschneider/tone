@@ -1,6 +1,5 @@
-import { ElevenLabsOptions } from '../types';
-import { ElevenLabsSynthesizer } from './ElevenLabsSynthesizer';
+import { ElevenLabsSynthesizer, ElevenLabsSynthesizerConstructor } from './ElevenLabsSynthesizer';
 
-export function createElevenLabsSynthesizer(options: ElevenLabsOptions) {
-  return new ElevenLabsSynthesizer(options);
+export function createElevenLabsSynthesizer(props: ElevenLabsSynthesizerConstructor) {
+  return new ElevenLabsSynthesizer(props);
 }
