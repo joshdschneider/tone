@@ -11,16 +11,19 @@ import {
   AgentState,
   CallEvent,
   Message,
+  Role,
   VoiceOptions,
   VoiceProvider,
 } from '../types';
 import { MESSAGE_TIMESTAMP_DELTA } from '../utils/constants';
 import { LogLevel, log } from '../utils/log';
+import { now } from '../utils/now';
 
 export type AgentConstructor = {
   id: string;
   prompt?: string;
   greeting?: string;
+  eagerGreet?: boolean;
   voicemail?: string;
   functions?: ActionFunction[];
   voiceProvider?: VoiceProvider;
@@ -33,6 +36,7 @@ export class Agent extends EventEmitter {
   private id: string;
   private prompt?: string;
   private greeting?: string;
+  private eagerGreet?: boolean;
   private voicemail?: string;
   private functions?: ActionFunction[];
   private voiceProvider?: VoiceProvider;
@@ -48,6 +52,7 @@ export class Agent extends EventEmitter {
     id,
     prompt,
     greeting,
+    eagerGreet,
     voicemail,
     functions,
     voiceProvider,
@@ -59,6 +64,7 @@ export class Agent extends EventEmitter {
     this.id = id;
     this.prompt = prompt;
     this.greeting = greeting;
+    this.eagerGreet = eagerGreet;
     this.voicemail = voicemail;
     this.functions = functions;
     this.voiceProvider = voiceProvider;
@@ -70,8 +76,10 @@ export class Agent extends EventEmitter {
     this.machine = createStateMachine({
       setState: (state: AgentState) => this.setState(state),
       hasGreeting: !!this.greeting,
+      eagerGreet: !!this.eagerGreet,
       greet: () => this.greet(),
       respond: () => this.respond(),
+      pregenerate: () => this.pregenerate(),
       cleanup: () => this.cleanup(),
       abort: () => this.abort(),
       recover: () => this.recover(),
@@ -94,13 +102,13 @@ export class Agent extends EventEmitter {
   }
 
   private dequeue() {
-    log(`Dequeueing event`);
     if (this.queue.length === 0) {
       log(`Stopping queue`);
       this.isProcessing = false;
       return;
     }
 
+    log(`Dequeueing event`);
     this.isProcessing = true;
     const event = this.queue.shift();
     if (event) {
@@ -143,6 +151,13 @@ export class Agent extends EventEmitter {
   }
 
   private greet() {
+    if (this.speech && this.speech.pregenerated) {
+      log(`Using pregenerated speech`);
+      this.speech.dequeuePregenerated();
+      this.stripHoistedGreeting();
+      return;
+    }
+
     log('Creating greeting');
     this.speech = createGreeting({
       greeting: this.greeting,
@@ -152,6 +167,7 @@ export class Agent extends EventEmitter {
     });
 
     this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
+    this.speech.on('message', (message: Message) => this.handleSpeechMessage(message));
     this.speech.on('done', () => this.handleSpeechDone());
     this.speech.on('error', (err: any) => this.handleSpeechError(err));
   }
@@ -167,6 +183,26 @@ export class Agent extends EventEmitter {
     });
 
     this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
+    this.speech.on('message', (message: Message) => this.handleSpeechMessage(message));
+    this.speech.on('done', () => this.handleSpeechDone());
+    this.speech.on('error', (err: any) => this.handleSpeechError(err));
+  }
+
+  private pregenerate() {
+    log('Creating pregenerated greeting');
+    this.hoistGreeting();
+
+    this.speech = createResponse({
+      messages: this.messages,
+      prompt: this.prompt,
+      functions: this.functions,
+      voiceProvider: this.voiceProvider,
+      voiceOptions: this.voiceOptions,
+      pregenerated: true,
+    });
+
+    this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
+    this.speech.on('message', (message: Message) => this.handleSpeechMessage(message));
     this.speech.on('done', () => this.handleSpeechDone());
     this.speech.on('error', (err: any) => this.handleSpeechError(err));
   }
@@ -181,16 +217,23 @@ export class Agent extends EventEmitter {
     });
 
     this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
+    this.speech.on('message', (message: Message) => this.handleSpeechMessage(message));
     this.speech.on('done', () => this.handleSpeechDone());
     this.speech.on('error', (err: any) => this.handleSpeechError(err));
   }
 
   private handleSpeech(speech: Buffer) {
     if (this.state === AgentState.SPEAKING) {
+      log(`SPEECH LENGTH: ${speech.length}`);
       this.emit('speech', speech);
     } else {
       log(`Failed to emit speech in state ${this.state}`, LogLevel.WARN);
     }
+  }
+
+  private handleSpeechMessage(message: Message) {
+    log(`Handling speech message: ${JSON.stringify(message)}`);
+    this.appendMessage(message);
   }
 
   private handleSpeechDone() {
@@ -199,8 +242,30 @@ export class Agent extends EventEmitter {
   }
 
   private handleSpeechError(err: any) {
-    log('Handling speech error');
+    log('Handling speech error', LogLevel.ERROR);
     this.enqueue(CallEvent.SPEECH_ERROR);
+  }
+
+  private hoistGreeting() {
+    log('Hoisting greeting for pregeneration');
+    this.appendMessage({
+      role: Role.USER,
+      content: 'Hello?',
+      start: now(),
+      end: now(),
+    });
+  }
+
+  private stripHoistedGreeting() {
+    log('Removing hoisted greeting');
+    try {
+      if (this.messages[0].content.startsWith('Hello')) {
+        this.messages[0].content = this.messages[0].content.replace('Hello? ', '');
+      }
+    } catch (err) {
+      log('Error removing hoisted greeting', LogLevel.ERROR);
+      captureException(err);
+    }
   }
 
   private cleanup() {

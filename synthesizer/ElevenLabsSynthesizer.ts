@@ -1,15 +1,13 @@
 import { RawData, WebSocket } from 'ws';
 import { captureException } from '../helpers/captureException';
-import { openElevenLabsSocket } from '../helpers/createElevenLabsSocket';
+import {
+  ElevenLabsModel,
+  OutputFormat,
+  openElevenLabsSocket,
+} from '../helpers/createElevenLabsSocket';
 import { VoiceOptions } from '../types';
 import { LogLevel, log } from '../utils/log';
 import { Synthesizer } from './Synthesizer';
-
-export enum ElevenLabsModel {
-  MULTILINGUAL_V2 = 'eleven_multilingual_v2',
-  MULTILINGUAL_V1 = 'eleven_multilingual_v1',
-  ENGLISH_V1 = 'eleven_monolingual_v1',
-}
 
 export type ElevenLabsSynthesizerConstructor = {
   voiceOptions?: VoiceOptions;
@@ -36,12 +34,13 @@ export class ElevenLabsSynthesizer extends Synthesizer {
       stability: options.stability || DEFAULT_OPTIONS.stability,
       similarityBoost: options.similarity_boost || DEFAULT_OPTIONS.similarity_boost,
       optimizeStreamingLatency: 2,
+      outputFormat: OutputFormat.PCM_16000,
     });
 
     this.socket.on('open', () => this.handleSocketOpen());
-    this.socket.on('message', (data) => this.handleSocketMessage(data));
+    this.socket.on('message', (data: RawData) => this.handleSocketMessage(data));
     this.socket.on('close', () => this.handleSocketClose());
-    this.socket.on('error', (err) => this.handleError(err));
+    this.socket.on('error', (err: any) => this.handleSocketError(err));
   }
 
   private getModel(language?: string) {
@@ -52,7 +51,7 @@ export class ElevenLabsSynthesizer extends Synthesizer {
 
   private handleSocketOpen() {
     log('ElevenLabs socket open');
-    this.emit('ready');
+    this.startInputProcessing();
   }
 
   public synthesize(text: string): void {
@@ -92,7 +91,7 @@ export class ElevenLabsSynthesizer extends Synthesizer {
         return;
       } else {
         audio = msg.audio;
-        isFinal = msg.isFinal;
+        isFinal = !!msg.isFinal;
         if (msg.normalizedAlignment && msg.normalizedAlignment.chars) {
           text = msg.normalizedAlignment.chars.join('');
         }
@@ -103,7 +102,7 @@ export class ElevenLabsSynthesizer extends Synthesizer {
     }
 
     const buffer = Buffer.from(audio, 'base64');
-    this.enqueue({ audio: buffer, text, isFinal });
+    this.enqueueOutput({ audio: buffer, text, isFinal });
   }
 
   public finish() {
@@ -125,20 +124,29 @@ export class ElevenLabsSynthesizer extends Synthesizer {
     this.emit('done');
   }
 
-  private handleError(err: any) {
+  private handleSocketError(err: any) {
     log('ElevenLabs error', LogLevel.ERROR);
     captureException(err);
     this.emit('error');
   }
 
-  public destroy(): void {
-    log(`Destroying ElevenLabs synthesizer`);
+  private close() {
     if (this.socket) {
-      this.socket.close();
+      try {
+        this.socket.terminate();
+      } catch (err) {
+        log(`Failed to terminate ElevenLabs socket`, LogLevel.ERROR);
+        captureException(err);
+      }
+
       this.socket.removeAllListeners();
       this.socket = undefined;
     }
+  }
 
-    this.removeAllListeners();
+  public destroy(): void {
+    log(`Destroying ElevenLabs synthesizer`);
+    this.close();
+    super.destroy();
   }
 }

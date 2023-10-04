@@ -19,11 +19,11 @@ export class Transcriber extends EventEmitter {
     super();
     this.options = options;
     this.connection = deepgram.transcription.live(this.options);
-    this.connection.on('open', this.handleConnectionOpen.bind(this));
-    this.connection.on('transcriptReceived', this.handleTranscript.bind(this));
-    this.connection.on('close', this.handleConnectionClose.bind(this));
-    this.connection.on('error', this.handleError.bind(this));
-    this.confidenceThreshold = 0.8;
+    this.connection.on('open', () => this.handleConnectionOpen());
+    this.connection.on('transcriptReceived', (data: string) => this.handleTranscript(data));
+    this.connection.on('close', () => this.handleConnectionClose());
+    this.connection.on('error', (err: any) => this.handleConnectionError(err));
+    this.confidenceThreshold = 0.9;
   }
 
   private handleConnectionOpen() {
@@ -38,12 +38,12 @@ export class Transcriber extends EventEmitter {
     }
   }
 
-  private handleTranscript(message: string) {
+  private handleTranscript(data: string) {
     let response: LiveTranscriptionResponse;
     let alternative: Alternative;
 
     try {
-      response = JSON.parse(message);
+      response = JSON.parse(data);
       alternative = response.channel.alternatives[0];
     } catch (_) {
       log('Failed to parse transcript', LogLevel.ERROR);
@@ -56,16 +56,18 @@ export class Transcriber extends EventEmitter {
       return;
     }
 
-    const timestamp = Date.now();
-    const len = Number(response.start) + Number(response.duration);
-    const duration = Math.floor(len * 1000);
+    const { transcript: speech, confidence: confidenceScore } = alternative;
+    const { start, end } = this.getTimestamps(response.start, response.duration);
+    const { is_final: isFull } = response;
+    const isFinal = this.isEndOfSpeech(speech, isFull);
 
     const transcript: Transcript = {
-      speech: alternative.transcript,
-      start: timestamp - duration,
-      end: timestamp,
-      isFinal: response.is_final,
-      isEndpoint: response.speech_final,
+      speech,
+      start,
+      end,
+      isFull,
+      isFinal,
+      confidenceScore,
     };
 
     this.emit('transcript', transcript);
@@ -75,10 +77,28 @@ export class Transcriber extends EventEmitter {
     log(`Transcriber connection closed`);
   }
 
-  private handleError(err: any) {
+  private handleConnectionError(err: any) {
     log('Transcriber error', LogLevel.ERROR);
     captureException(err);
     this.emit('error', err);
+  }
+
+  private isEndOfSpeech(speech: string, isFull: boolean): boolean {
+    let regExp: RegExp;
+    if (!isFull) {
+      regExp = /[!.?]+$/;
+    } else {
+      regExp = /[!.,?]+$/;
+    }
+
+    return regExp.test(speech.trim());
+  }
+
+  private getTimestamps(start: number, duration: number) {
+    const timestamp = Date.now();
+    const len = Number(start) + Number(duration);
+    const dur = Math.floor(len * 1000);
+    return { start: timestamp - dur, end: timestamp };
   }
 
   public close() {

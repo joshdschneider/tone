@@ -3,8 +3,10 @@ import { AgentState, CallEvent } from '../types';
 export type StateMachineConstructor = {
   setState: (state: AgentState) => void;
   hasGreeting: boolean;
+  eagerGreet: boolean;
   greet: () => void;
   respond: () => void;
+  pregenerate: () => void;
   cleanup: () => void;
   abort: () => void;
   recover: () => void;
@@ -13,8 +15,10 @@ export type StateMachineConstructor = {
 export class StateMachine {
   private setState: (state: AgentState) => void;
   private hasGreeting: boolean;
+  private eagerGreet: boolean;
   private greet: () => void;
   private respond: () => void;
+  private pregenerate: () => void;
   private cleanup: () => void;
   private abort: () => void;
   private recover: () => void;
@@ -22,16 +26,20 @@ export class StateMachine {
   constructor({
     setState,
     hasGreeting,
+    eagerGreet,
     greet,
     respond,
+    pregenerate,
     cleanup,
     abort,
     recover,
   }: StateMachineConstructor) {
     this.setState = setState;
     this.hasGreeting = hasGreeting;
+    this.eagerGreet = eagerGreet;
     this.greet = greet;
     this.respond = respond;
+    this.pregenerate = pregenerate;
     this.cleanup = cleanup;
     this.abort = abort;
     this.recover = recover;
@@ -48,7 +56,11 @@ export class StateMachine {
 
           case CallEvent.CALL_CONNECTED_OUTBOUND:
             if (!this.hasGreeting) {
-              this.setState(AgentState.LISTENING);
+              if (this.eagerGreet) {
+                this.pregenerate();
+              } else {
+                this.setState(AgentState.LISTENING);
+              }
             }
             return;
 
@@ -56,7 +68,7 @@ export class StateMachine {
           case CallEvent.TRANSCRIPT_FULL:
             return;
 
-          case CallEvent.TRANSCRIPT_ENDPOINT:
+          case CallEvent.TRANSCRIPT_FINAL:
             this.setState(AgentState.SPEAKING);
             this.greet();
             return;
@@ -68,10 +80,10 @@ export class StateMachine {
       case AgentState.LISTENING:
         switch (event) {
           case CallEvent.TRANSCRIPT_PARTIAL:
+          case CallEvent.TRANSCRIPT_FULL:
             return;
 
-          case CallEvent.TRANSCRIPT_FULL:
-          case CallEvent.TRANSCRIPT_ENDPOINT:
+          case CallEvent.TRANSCRIPT_FINAL:
             this.setState(AgentState.SPEAKING);
             this.respond();
             return;
@@ -88,7 +100,7 @@ export class StateMachine {
             return;
 
           case CallEvent.TRANSCRIPT_FULL:
-          case CallEvent.TRANSCRIPT_ENDPOINT:
+          case CallEvent.TRANSCRIPT_FINAL:
             this.abort();
             this.setState(AgentState.SPEAKING);
             this.respond();

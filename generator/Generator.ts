@@ -45,7 +45,7 @@ export class Generator extends EventEmitter {
   private formatFunctions(functions?: ActionFunction[]): OpenAIFunction[] | undefined {
     return functions
       ? functions.map((func) => {
-          const { action_id, ...rest } = func;
+          const { action_id, hoist_final_response, require_human_approval, ...rest } = func;
           return { ...rest };
         })
       : undefined;

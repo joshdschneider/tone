@@ -9,11 +9,11 @@ export type ResponseConstructor = {
   prompt?: string;
   functions?: ActionFunction[];
   split?: Split;
+  pregenerated?: boolean;
 } & SpeechConstructor;
 
 export class Response extends Speech {
   private generator?;
-  private split?: Split;
 
   constructor({
     messages,
@@ -22,8 +22,10 @@ export class Response extends Speech {
     split,
     voiceProvider,
     voiceOptions,
+    pregenerated,
   }: ResponseConstructor) {
     super({ voiceProvider, voiceOptions });
+    this.pregenerated = pregenerated;
     this.generator = createGenerator({ messages, prompt, functions, split });
     this.generator.on('text', (chunk: TextChunk) => this.handleTextChunk(chunk));
     this.generator.on('function_call', (func: ActionFunction) => this.handleFunctionCall(func));
@@ -37,6 +39,7 @@ export class Response extends Speech {
   }
 
   private handleFunctionCall(func: ActionFunction) {
+    // TODO
     log('Function call generated');
   }
 

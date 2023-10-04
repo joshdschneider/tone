@@ -45,6 +45,7 @@ export async function createCall({ socket, data }: CreateCallProps) {
     id: agentId,
     prompt: prompt || undefined,
     greeting: greeting || undefined,
+    eagerGreet: true,
     voicemail: voicemail || undefined,
     functions: functions.length > 0 ? functions : undefined,
     voiceProvider: voice_provider || undefined,

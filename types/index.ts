@@ -19,8 +19,9 @@ export type Transcript = {
   speech: string;
   start: number;
   end: number;
+  isFull: boolean;
   isFinal: boolean;
-  isEndpoint: boolean;
+  confidenceScore: number;
 };
 
 export type TextChunk = {
@@ -95,7 +96,7 @@ export enum CallEvent {
   CALL_CONNECTED_OUTBOUND = 'CALL_CONNECTED_OUTBOUND',
   TRANSCRIPT_PARTIAL = 'TRANSCRIPT_PARTIAL',
   TRANSCRIPT_FULL = 'TRANSCRIPT_FULL',
-  TRANSCRIPT_ENDPOINT = 'TRANSCRIPT_ENDPOINT',
+  TRANSCRIPT_FINAL = 'TRANSCRIPT_FINAL',
   SPEECH_ENDED = 'SPEECH_ENDED',
   SPEECH_ERROR = 'SPEECH_ERROR',
 }
@@ -126,6 +127,8 @@ export interface OpenAIFunction {
 
 export type ActionFunction = OpenAIFunction & {
   action_id: string;
+  hoist_final_response?: boolean;
+  require_human_approval?: boolean;
 };
 
 export interface ContentMessage extends OpenAIBaseMessage {

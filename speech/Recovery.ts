@@ -14,10 +14,10 @@ export class Recovery extends Speech {
   constructor({ language, voiceOptions, voiceProvider }: RecoveryConstructor) {
     super({ voiceOptions, voiceProvider });
     this.voiceOptions = voiceOptions;
-    this.synthesizer.on('ready', () => this.onSynthesizerReady());
+    this.recover();
   }
 
-  private onSynthesizerReady() {
+  private recover() {
     log(`Synthesizing recovery`);
     const chunk = {
       text: DEFAULT_RECOVERY,

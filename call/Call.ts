@@ -25,10 +25,10 @@ export class Call extends EventEmitter {
 
   constructor({ socket, id, direction, transcriber, agent }: CallConstructor) {
     super();
-    this.socket = socket;
-    this.socket.on('close', () => this.onSocketClose());
     this.id = id;
     this.direction = direction;
+    this.socket = socket;
+    this.socket.on('close', () => this.onSocketClose());
     this.transcriber = transcriber;
     this.transcriber.on('transcript', (transcript: Transcript) => this.onTranscript(transcript));
     this.transcriber.on('error', (err: any) => this.onTranscriberError(err));
@@ -36,6 +36,7 @@ export class Call extends EventEmitter {
     this.agent.on('speech', (chunk: Buffer) => this.onAgentSpeech(chunk));
     this.agent.on('error', (err: any) => this.onAgentError(err));
     this.start = now();
+    this.startCall();
   }
 
   public processAudio(buffer: Buffer) {
@@ -62,14 +63,14 @@ export class Call extends EventEmitter {
 
   private onTranscript(transcript: Transcript) {
     log(`Transcript received: ${JSON.stringify(transcript)}`);
-    if (!transcript.isFinal) {
+    if (!transcript.isFull) {
       this.agent.enqueue(CallEvent.TRANSCRIPT_PARTIAL);
     } else {
       this.appendTranscript(transcript);
-      if (!transcript.isEndpoint) {
+      if (!transcript.isFinal) {
         this.agent.enqueue(CallEvent.TRANSCRIPT_FULL);
       } else {
-        this.agent.enqueue(CallEvent.TRANSCRIPT_ENDPOINT);
+        this.agent.enqueue(CallEvent.TRANSCRIPT_FINAL);
       }
     }
   }
@@ -83,7 +84,7 @@ export class Call extends EventEmitter {
   }
 
   private onTranscriberError(err: Error) {
-    log('Transcriber failed');
+    log('Transcriber failed', LogLevel.ERROR);
     this.endCall();
   }
 
@@ -92,8 +93,23 @@ export class Call extends EventEmitter {
   }
 
   private onAgentError(err: Error) {
-    log('Agent failed');
+    log('Agent failed', LogLevel.ERROR);
     this.endCall();
+  }
+
+  private startCall() {
+    log(`Call starting ${this.direction}`);
+    switch (this.direction) {
+      case CallDirection.INBOUND:
+        this.agent.enqueue(CallEvent.CALL_CONNECTED_INBOUND);
+        return;
+      case CallDirection.OUTBOUND:
+        this.agent.enqueue(CallEvent.CALL_CONNECTED_OUTBOUND);
+        break;
+      default:
+        log(`Invalid direction:`, this.direction);
+        return;
+    }
   }
 
   private endCall() {

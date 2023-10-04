@@ -16,10 +16,10 @@ export class Greeting extends Speech {
     super({ voiceOptions, voiceProvider });
     this.agentId = agentId;
     this.greeting = greeting;
-    this.synthesizer.on('ready', () => this.onSynthesizerReady());
+    this.greet();
   }
 
-  private onSynthesizerReady() {
+  private greet() {
     if (!this.greeting) {
       log(`Synthesizing default greeting`);
       this.synthesize({
