@@ -16,6 +16,7 @@ import {
   VoiceProvider,
 } from '../types';
 import { MESSAGE_TIMESTAMP_DELTA } from '../utils/constants';
+import { getHoistedGreetingContent } from '../utils/greeting';
 import { LogLevel, log } from '../utils/log';
 import { now } from '../utils/now';
 
@@ -164,6 +165,7 @@ export class Agent extends EventEmitter {
       agentId: this.id,
       voiceProvider: this.voiceProvider,
       voiceOptions: this.voiceOptions,
+      language: this.language,
     });
 
     this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
@@ -180,6 +182,7 @@ export class Agent extends EventEmitter {
       functions: this.functions,
       voiceProvider: this.voiceProvider,
       voiceOptions: this.voiceOptions,
+      language: this.language,
     });
 
     this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
@@ -198,6 +201,7 @@ export class Agent extends EventEmitter {
       functions: this.functions,
       voiceProvider: this.voiceProvider,
       voiceOptions: this.voiceOptions,
+      language: this.language,
       pregenerated: true,
     });
 
@@ -250,7 +254,7 @@ export class Agent extends EventEmitter {
     log('Hoisting greeting for pregeneration');
     this.appendMessage({
       role: Role.USER,
-      content: 'Hello?',
+      content: getHoistedGreetingContent(this.language),
       start: now(),
       end: now(),
     });

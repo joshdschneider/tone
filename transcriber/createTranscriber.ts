@@ -19,6 +19,7 @@ export function createTranscriber(options: TranscriberOptions) {
 
   if (options.language) {
     opts.language = options.language;
+    opts.model = 'general';
   }
 
   if (options.keywords) {

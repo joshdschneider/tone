@@ -61,20 +61,40 @@ export type Agent = {
   organization_id: string;
   number_id: string | null;
   name: string;
-  active: boolean;
+  prompt_raw: string | null;
+  prompt_text: string | null;
+  variables: string | null;
+  calls_enabled: boolean;
+  call_settings: CallSettings | null;
+  texts_enabled: boolean;
+  text_settings: TextSettings | null;
+  created_at: Date;
+  updated_at: Date;
+  deleted_At: Date | null;
+};
+
+export type CallSettings = {
   inbound_enabled: boolean;
   outbound_enabled: boolean;
-  prompt: string | null;
   greeting: string | null;
   voicemail: string | null;
   language: string | null;
   keywords: string | null;
   voice_provider: VoiceProvider;
   voice_options: VoiceOptions;
-  created_at: Date;
-  updated_at: Date;
-  deleted_At: Date | null;
 };
+
+export type TextSettings = {};
+
+export type Variable = {
+  id: string;
+  name: string;
+  fallback: string | null;
+  required: boolean;
+  source: VariableSource | null;
+};
+
+export type VariableSource = {};
 
 export type ElevenLabsOptions = {
   id: string;

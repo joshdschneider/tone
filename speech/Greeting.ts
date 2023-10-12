@@ -1,5 +1,5 @@
 import { Split } from '../generator/Generator';
-import { DEFAULT_GREETING } from '../utils/constants';
+import { getDefaultGreeting } from '../utils/greeting';
 import { log } from '../utils/log';
 import { Speech, SpeechConstructor } from './Speech';
 
@@ -12,8 +12,8 @@ export class Greeting extends Speech {
   private agentId: string;
   private greeting?: string;
 
-  constructor({ agentId, greeting, voiceOptions, voiceProvider }: GreetingConstructor) {
-    super({ voiceOptions, voiceProvider });
+  constructor({ agentId, greeting, voiceOptions, voiceProvider, language }: GreetingConstructor) {
+    super({ voiceOptions, voiceProvider, language });
     this.agentId = agentId;
     this.greeting = greeting;
     this.greet();
@@ -23,7 +23,7 @@ export class Greeting extends Speech {
     if (!this.greeting) {
       log(`Synthesizing default greeting`);
       this.synthesize({
-        text: DEFAULT_GREETING,
+        text: getDefaultGreeting(this.language),
         split: Split.NONE,
         isFinal: true,
       });

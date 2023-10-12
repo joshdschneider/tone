@@ -25,16 +25,9 @@ export async function createCall({ socket, data }: CreateCallProps) {
   log(`Creating call with config: ${JSON.stringify(config)}`);
 
   const { direction, functions } = config;
-  const {
-    id: agentId,
-    prompt,
-    greeting,
-    voicemail,
-    language,
-    keywords,
-    voice_provider,
-    voice_options,
-  } = config.agent;
+  const { id: agentId, prompt_text, variables, call_settings } = config.agent;
+  const { greeting, voicemail, voice_provider, voice_options, language, keywords } =
+    call_settings!!;
 
   const transcriber = createTranscriber({
     keywords: keywords || undefined,
@@ -43,7 +36,7 @@ export async function createCall({ socket, data }: CreateCallProps) {
 
   const agent = createAgent({
     id: agentId,
-    prompt: prompt || undefined,
+    prompt: prompt_text || undefined,
     greeting: greeting || undefined,
     eagerGreet: true,
     voicemail: voicemail || undefined,

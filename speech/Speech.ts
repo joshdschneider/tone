@@ -23,6 +23,7 @@ export type SpeechConstructor = {
 export abstract class Speech extends EventEmitter {
   public synthesizer: Synthesizer;
   public pregenerated?: boolean;
+  public language?: string;
   private timestamp: number;
   private queue: SynthesisChunk[];
   private isProcessing: boolean;
@@ -30,6 +31,7 @@ export abstract class Speech extends EventEmitter {
 
   constructor({ voiceProvider, voiceOptions, language }: SpeechConstructor) {
     super();
+    this.language = language;
     this.synthesizer = createSynthesizer({ voiceProvider, voiceOptions, language });
     this.synthesizer.on('chunk', (chunk: SynthesisChunk) => this.handleSynthesisChunk(chunk));
     this.synthesizer.on('done', () => this.handleSynthesisDone());
