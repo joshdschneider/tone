@@ -3,7 +3,7 @@ import { captureException } from '../helpers/captureException';
 import {
   ElevenLabsModel,
   OutputFormat,
-  openElevenLabsSocket,
+  createElevenLabsSocket,
 } from '../helpers/createElevenLabsSocket';
 import { VoiceOptions } from '../types';
 import { LogLevel, log } from '../utils/log';
@@ -28,7 +28,7 @@ export class ElevenLabsSynthesizer extends Synthesizer {
     super();
     const options = voiceOptions || DEFAULT_OPTIONS;
     const model = this.getModel(language);
-    this.socket = openElevenLabsSocket({
+    this.socket = createElevenLabsSocket({
       model,
       voiceId: options.id,
       stability: options.stability || DEFAULT_OPTIONS.stability,

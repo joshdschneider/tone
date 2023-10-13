@@ -10,7 +10,7 @@ export enum OutputFormat {
   PCM_16000 = 'pcm_16000',
 }
 
-export type OpenElevenLabsSocketProps = {
+export type CreateElevenLabsSocketProps = {
   model: ElevenLabsModel;
   voiceId: string;
   stability: number;
@@ -19,14 +19,14 @@ export type OpenElevenLabsSocketProps = {
   outputFormat: OutputFormat;
 };
 
-export function openElevenLabsSocket({
+export function createElevenLabsSocket({
   model,
   voiceId,
   stability,
   similarityBoost,
   optimizeStreamingLatency,
   outputFormat,
-}: OpenElevenLabsSocketProps) {
+}: CreateElevenLabsSocketProps) {
   const API_KEY = process.env.ELEVENLABS_API_KEY as string;
   const BASE_URL = 'wss://api.elevenlabs.io/v1/text-to-speech';
   const URL = `${BASE_URL}/${voiceId}/stream-input`;

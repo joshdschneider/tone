@@ -65,9 +65,9 @@ export class StateMachine {
             return;
 
           case CallEvent.TRANSCRIPT_PARTIAL:
-          case CallEvent.TRANSCRIPT_FULL:
             return;
 
+          case CallEvent.TRANSCRIPT_FULL:
           case CallEvent.TRANSCRIPT_FINAL:
             this.setState(AgentState.SPEAKING);
             this.greet();
@@ -80,9 +80,9 @@ export class StateMachine {
       case AgentState.LISTENING:
         switch (event) {
           case CallEvent.TRANSCRIPT_PARTIAL:
-          case CallEvent.TRANSCRIPT_FULL:
             return;
 
+          case CallEvent.TRANSCRIPT_FULL:
           case CallEvent.TRANSCRIPT_FINAL:
             this.setState(AgentState.SPEAKING);
             this.respond();
