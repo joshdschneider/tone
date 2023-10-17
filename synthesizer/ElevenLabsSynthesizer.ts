@@ -1,13 +1,19 @@
 import { RawData, WebSocket } from 'ws';
 import { captureException } from '../helpers/captureException';
-import {
-  ElevenLabsModel,
-  OutputFormat,
-  createElevenLabsSocket,
-} from '../helpers/createElevenLabsSocket';
+import ElevenLabsService from '../services/ElevenLabsService';
 import { VoiceOptions } from '../types';
 import { LogLevel, log } from '../utils/log';
 import { Synthesizer } from './Synthesizer';
+
+export enum ElevenLabsModel {
+  MULTILINGUAL_V2 = 'eleven_multilingual_v2',
+  MULTILINGUAL_V1 = 'eleven_multilingual_v1',
+  ENGLISH_V1 = 'eleven_monolingual_v1',
+}
+
+export enum OutputFormat {
+  PCM_16000 = 'pcm_16000',
+}
 
 export type ElevenLabsSynthesizerConstructor = {
   voiceOptions?: VoiceOptions;
@@ -23,12 +29,13 @@ const DEFAULT_OPTIONS = {
 
 export class ElevenLabsSynthesizer extends Synthesizer {
   private socket?: WebSocket;
+  private terminate?: boolean;
 
   constructor({ voiceOptions, language }: ElevenLabsSynthesizerConstructor) {
     super();
     const options = voiceOptions || DEFAULT_OPTIONS;
     const model = this.getModel(language);
-    this.socket = createElevenLabsSocket({
+    this.socket = ElevenLabsService.textToSpeechStream({
       model,
       voiceId: options.id,
       stability: options.stability || DEFAULT_OPTIONS.stability,
@@ -50,6 +57,15 @@ export class ElevenLabsSynthesizer extends Synthesizer {
   }
 
   private handleSocketOpen() {
+    if (this.socket && this.terminate) {
+      log('TERMINATING FROM OPEN!!');
+      this.socket.terminate();
+      this.socket.removeAllListeners();
+      this.socket = undefined;
+      this.terminate = undefined;
+      return;
+    }
+
     log('ElevenLabs socket open');
     this.startInputProcessing();
   }
@@ -132,15 +148,16 @@ export class ElevenLabsSynthesizer extends Synthesizer {
 
   private close() {
     if (this.socket) {
-      try {
+      if (this.socket.readyState === 1) {
         this.socket.terminate();
-      } catch (err) {
-        log(`Failed to terminate ElevenLabs socket`, LogLevel.ERROR);
-        captureException(err);
+        this.socket.removeAllListeners();
+        this.socket = undefined;
+      } else if (this.socket.readyState === 0) {
+        this.terminate = true;
+      } else {
+        this.socket.removeAllListeners();
+        this.socket = undefined;
       }
-
-      this.socket.removeAllListeners();
-      this.socket = undefined;
     }
   }
 

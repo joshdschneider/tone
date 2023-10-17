@@ -13,11 +13,7 @@ type GenerateCompletionRequest = {
   signal: AbortSignal;
 };
 
-export async function generateCompletion({
-  messages,
-  functions,
-  signal,
-}: GenerateCompletionRequest) {
+async function generateCompletion({ messages, functions, signal }: GenerateCompletionRequest) {
   const res = await fetch(URL, {
     headers: {
       'Content-Type': 'application/json',
@@ -40,7 +36,7 @@ export async function generateCompletion({
   if (res.status !== 200) {
     const result = await res.json();
     if (result.error) {
-      throw new Error(`OpenAI error: ${result.error.toString()}`);
+      throw new Error(`OpenAI error: ${JSON.stringify(result.error)}`);
     } else {
       throw new Error(`OpenAI error`);
     }
@@ -72,3 +68,5 @@ export async function generateCompletion({
 
   return readableStream;
 }
+
+export default { generateCompletion };

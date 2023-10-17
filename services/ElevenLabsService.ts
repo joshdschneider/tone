@@ -1,16 +1,7 @@
 import { WebSocket } from 'ws';
+import { ElevenLabsModel, OutputFormat } from '../synthesizer/ElevenLabsSynthesizer';
 
-export enum ElevenLabsModel {
-  MULTILINGUAL_V2 = 'eleven_multilingual_v2',
-  MULTILINGUAL_V1 = 'eleven_multilingual_v1',
-  ENGLISH_V1 = 'eleven_monolingual_v1',
-}
-
-export enum OutputFormat {
-  PCM_16000 = 'pcm_16000',
-}
-
-export type CreateElevenLabsSocketProps = {
+type CreateElevenLabsSocketProps = {
   model: ElevenLabsModel;
   voiceId: string;
   stability: number;
@@ -19,7 +10,7 @@ export type CreateElevenLabsSocketProps = {
   outputFormat: OutputFormat;
 };
 
-export function createElevenLabsSocket({
+function textToSpeechStream({
   model,
   voiceId,
   stability,
@@ -47,3 +38,5 @@ export function createElevenLabsSocket({
 
   return socket;
 }
+
+export default { textToSpeechStream };

@@ -1,7 +1,7 @@
 import nlp from 'compromise';
 import { EventEmitter } from 'events';
 import { captureException } from '../helpers/captureException';
-import { generateCompletion } from '../helpers/generateCompletion';
+import OpenAIService from '../services/OpenAIService';
 import { ActionFunction, Message, OpenAIFunction, OpenAIMessage, Role } from '../types';
 import { DEFAULT_PROMPT } from '../utils/constants';
 import { LogLevel, log } from '../utils/log';
@@ -54,7 +54,7 @@ export class Generator extends EventEmitter {
   public generate() {
     log('Generating response');
     this.controller = new AbortController();
-    generateCompletion({
+    OpenAIService.generateCompletion({
       messages: this.formatMessages(this.messages),
       functions: this.formatFunctions(this.functions),
       signal: this.controller.signal,

@@ -228,7 +228,6 @@ export class Agent extends EventEmitter {
 
   private handleSpeech(speech: Buffer) {
     if (this.state === AgentState.SPEAKING) {
-      log(`SPEECH LENGTH: ${speech.length}`);
       this.emit('speech', speech);
     } else {
       log(`Failed to emit speech in state ${this.state}`, LogLevel.WARN);

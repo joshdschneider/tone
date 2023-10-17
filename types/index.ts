@@ -12,6 +12,7 @@ export enum VoiceProvider {
 export type CallConfiguration = {
   direction: CallDirection;
   agent: Agent;
+  context: string | null;
   functions: ActionFunction[];
 };
 
