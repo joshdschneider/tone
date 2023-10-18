@@ -305,7 +305,9 @@ export class Agent extends EventEmitter {
   private handleSpeechDone() {
     log('Handling speech done');
     if (this.endCallOnSpeechDone) {
-      this.emit('end');
+      setTimeout(() => {
+        this.emit('end');
+      }, 1000);
     } else {
       this.enqueue(CallEvent.SPEECH_ENDED);
     }
