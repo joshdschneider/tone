@@ -59,7 +59,9 @@ export class Call extends EventEmitter {
 
   private onSocketClose() {
     log('Socket closed');
-    this.endCall();
+    if (!this.end) {
+      this.endCall();
+    }
   }
 
   private onTranscript(transcript: Transcript) {
