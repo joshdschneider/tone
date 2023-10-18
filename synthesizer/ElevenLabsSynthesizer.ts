@@ -98,7 +98,6 @@ export class ElevenLabsSynthesizer extends Synthesizer {
   private handleSocketMessage(data: RawData) {
     let audio: string;
     let text: string | undefined;
-    let isFinal: boolean;
 
     try {
       const str = data.toString('utf8');
@@ -107,7 +106,6 @@ export class ElevenLabsSynthesizer extends Synthesizer {
         return;
       } else {
         audio = msg.audio;
-        isFinal = !!msg.isFinal;
         if (msg.normalizedAlignment && msg.normalizedAlignment.chars) {
           text = msg.normalizedAlignment.chars.join('');
         }
@@ -118,7 +116,7 @@ export class ElevenLabsSynthesizer extends Synthesizer {
     }
 
     const buffer = Buffer.from(audio, 'base64');
-    this.enqueueOutput({ audio: buffer, text, isFinal });
+    this.enqueueOutput({ audio: buffer, text });
   }
 
   public finish() {

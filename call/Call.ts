@@ -35,6 +35,7 @@ export class Call extends EventEmitter {
     this.agent = agent;
     this.agent.on('speech', (chunk: Buffer) => this.onAgentSpeech(chunk));
     this.agent.on('error', (err: any) => this.onAgentError(err));
+    this.agent.on('end', () => this.onAgentEnd());
     this.start = now();
     this.startCall();
   }
@@ -97,25 +98,30 @@ export class Call extends EventEmitter {
     this.endCall();
   }
 
+  private onAgentEnd() {
+    log('Ending call from agent');
+    this.endCall();
+  }
+
   private startCall() {
     log(`Call starting ${this.direction}`);
     switch (this.direction) {
       case CallDirection.INBOUND:
         this.agent.enqueue(CallEvent.CALL_CONNECTED_INBOUND);
-        return;
+        break;
       case CallDirection.OUTBOUND:
         this.agent.enqueue(CallEvent.CALL_CONNECTED_OUTBOUND);
         break;
       default:
         log(`Invalid direction:`, this.direction);
-        return;
+        break;
     }
   }
 
   private endCall() {
     log(`Ending call`);
     this.end = now();
-    if (!this.socket.CLOSED) {
+    if (this.socket.readyState !== 3) {
       this.socket.close();
     }
 

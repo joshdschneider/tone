@@ -27,6 +27,7 @@ export abstract class Speech extends EventEmitter {
   private timestamp: number;
   private queue: SynthesisChunk[];
   private isProcessing: boolean;
+  private isDone: boolean;
   private playbackInterval: number;
 
   constructor({ voiceProvider, voiceOptions, language }: SpeechConstructor) {
@@ -38,6 +39,7 @@ export abstract class Speech extends EventEmitter {
     this.synthesizer.on('error', (err: any) => this.handleSynthesisError(err));
     this.queue = [];
     this.isProcessing = false;
+    this.isDone = false;
     this.playbackInterval = 20;
     this.timestamp = now();
   }
@@ -54,6 +56,9 @@ export abstract class Speech extends EventEmitter {
     if (this.queue.length === 0) {
       log(`Stopping speech queue`);
       this.isProcessing = false;
+      if (this.isDone) {
+        this.emit('done');
+      }
       return;
     }
 
@@ -99,10 +104,6 @@ export abstract class Speech extends EventEmitter {
         await delay(this.playbackInterval);
       }
     }
-
-    if (chunk.isFinal) {
-      this.emit('done');
-    }
   }
 
   public dequeuePregenerated() {
@@ -127,6 +128,10 @@ export abstract class Speech extends EventEmitter {
 
   private handleSynthesisDone() {
     log('Synthesis done');
+    this.isDone = true;
+    if (this.queue.length === 0) {
+      this.emit('done');
+    }
   }
 
   private handleSynthesisError(err: any) {

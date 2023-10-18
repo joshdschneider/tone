@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { createAgent } from '../agent/createAgent';
+import { getActionFunctions } from '../helpers/getActionFunctions';
 import { injectContext } from '../helpers/injectContext';
 import { parseContext } from '../helpers/parseContext';
 import { parseVariables } from '../helpers/parseVariables';
@@ -42,8 +43,7 @@ export async function createCall({ socket, data }: CreateCallProps) {
   const parsedContext = parseContext(context);
   const promptWithContext = injectContext(prompt_text, parsedVariables, parsedContext);
   const prompt = wrapPrompt(promptWithContext);
-
-  console.log(prompt);
+  const actionFunctions = getActionFunctions(functions);
 
   const agent = createAgent({
     id: agentId,
@@ -51,7 +51,7 @@ export async function createCall({ socket, data }: CreateCallProps) {
     greeting: greeting || undefined,
     eagerGreet: true,
     voicemail: voicemail || undefined,
-    functions: functions.length > 0 ? functions : undefined,
+    functions: actionFunctions,
     voiceProvider: voice_provider || undefined,
     voiceOptions: voice_options || undefined,
     language: language || undefined,

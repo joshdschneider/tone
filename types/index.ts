@@ -34,7 +34,6 @@ export type TextChunk = {
 export type SynthesisChunk = {
   audio: Buffer;
   text?: string;
-  isFinal: boolean;
 };
 
 export type SpeechChunk = {
@@ -120,7 +119,15 @@ export enum CallEvent {
   TRANSCRIPT_FINAL = 'TRANSCRIPT_FINAL',
   SPEECH_ENDED = 'SPEECH_ENDED',
   SPEECH_ERROR = 'SPEECH_ERROR',
+  INACTIVITY_FIRST = 'INACTIVITY_FIRST',
+  INACTIVITY_SECOND = 'INACTIVITY_SECOND',
+  INACTIVITY_THIRD = 'INACTIVITY_THIRD',
 }
+
+export type FunctionCall = {
+  name: string;
+  args: any;
+};
 
 export interface OpenAIBaseMessage {
   role: Role;

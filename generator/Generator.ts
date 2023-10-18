@@ -144,7 +144,7 @@ export class Generator extends EventEmitter {
 
     if (responseType === ResponseType.FUNCTION_CALL) {
       const parsedArgs = JSON.parse(args);
-      this.emit('functionCall', {
+      this.emit('function_call', {
         name,
         args: parsedArgs,
       });

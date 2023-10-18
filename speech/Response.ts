@@ -1,6 +1,6 @@
-import { Split } from '../generator/Generator';
+import { Generator, Split } from '../generator/Generator';
 import { createGenerator } from '../generator/createGenerator';
-import { ActionFunction, Message, TextChunk } from '../types';
+import { ActionFunction, FunctionCall, Message, TextChunk } from '../types';
 import { LogLevel, log } from '../utils/log';
 import { Speech, SpeechConstructor } from './Speech';
 
@@ -13,7 +13,7 @@ export type ResponseConstructor = {
 } & SpeechConstructor;
 
 export class Response extends Speech {
-  private generator?;
+  private generator?: Generator;
 
   constructor({
     messages,
@@ -28,7 +28,7 @@ export class Response extends Speech {
     this.pregenerated = pregenerated;
     this.generator = createGenerator({ messages, prompt, functions, split });
     this.generator.on('text', (chunk: TextChunk) => this.handleTextChunk(chunk));
-    this.generator.on('function_call', (func: ActionFunction) => this.handleFunctionCall(func));
+    this.generator.on('function_call', (func: FunctionCall) => this.handleFunctionCall(func));
     this.generator.on('done', () => this.handleGeneratorDone());
     this.generator.on('error', (err: any) => this.handleGeneratorError(err));
     this.generator.generate();
@@ -38,9 +38,9 @@ export class Response extends Speech {
     this.synthesize(textChunk);
   }
 
-  private handleFunctionCall(func: ActionFunction) {
-    // TODO
-    log('Function call generated');
+  private async handleFunctionCall(func: FunctionCall) {
+    log(`Function called: ${JSON.stringify(func)}`);
+    this.emit('function_call', func);
   }
 
   private handleGeneratorDone() {

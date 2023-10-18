@@ -10,6 +10,7 @@ export type StateMachineConstructor = {
   cleanup: () => void;
   abort: () => void;
   recover: () => void;
+  check: (ev: CallEvent) => void;
 };
 
 export class StateMachine {
@@ -22,6 +23,7 @@ export class StateMachine {
   private cleanup: () => void;
   private abort: () => void;
   private recover: () => void;
+  private check: (ev: CallEvent) => void;
 
   constructor({
     setState,
@@ -33,6 +35,7 @@ export class StateMachine {
     cleanup,
     abort,
     recover,
+    check,
   }: StateMachineConstructor) {
     this.setState = setState;
     this.hasGreeting = hasGreeting;
@@ -43,6 +46,7 @@ export class StateMachine {
     this.cleanup = cleanup;
     this.abort = abort;
     this.recover = recover;
+    this.check = check;
   }
 
   public transition(currentState: AgentState, event: CallEvent) {
@@ -73,6 +77,16 @@ export class StateMachine {
             this.greet();
             return;
 
+          case CallEvent.INACTIVITY_FIRST:
+          case CallEvent.INACTIVITY_SECOND:
+            this.setState(AgentState.SPEAKING);
+            this.check(event);
+            return;
+
+          case CallEvent.INACTIVITY_THIRD:
+            this.check(event);
+            return;
+
           default:
             throw new Error(`Unhandled event ${event} in state ${AgentState.IDLE}`);
         }
@@ -86,6 +100,16 @@ export class StateMachine {
           case CallEvent.TRANSCRIPT_FINAL:
             this.setState(AgentState.SPEAKING);
             this.respond();
+            return;
+
+          case CallEvent.INACTIVITY_FIRST:
+          case CallEvent.INACTIVITY_SECOND:
+            this.setState(AgentState.SPEAKING);
+            this.check(event);
+            return;
+
+          case CallEvent.INACTIVITY_THIRD:
+            this.check(event);
             return;
 
           default:
