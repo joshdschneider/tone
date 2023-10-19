@@ -87,7 +87,7 @@ export type CallSettings = {
   voice_options: VoiceOptions;
 };
 
-export type TextSettings = {};
+export type TextSettings = object;
 
 export type Variable = {
   id: string;

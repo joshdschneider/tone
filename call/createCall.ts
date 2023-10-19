@@ -21,19 +21,14 @@ export async function createCall({ socket, data }: CreateCallProps) {
   const { event, ['content-type']: _, id: callId } = data;
   let config: CallConfiguration;
 
-  try {
-    const response = await CallService.getCallConfig(callId);
-    config = response.config;
-  } catch (err) {
-    throw err;
-  }
-
+  const response = await CallService.getCallConfig(callId);
+  config = response.config;
   log(`Creating call with config: ${JSON.stringify(config)}`);
 
   const { direction, context, functions } = config;
   const { id: agentId, prompt_text, variables, call_settings, language } = config.agent;
   const { voicemail_enabled, voicemail_message, voice_provider, voice_options, keywords } =
-    call_settings!!;
+    call_settings!;
 
   const greeting = getGreeting(direction, call_settings);
   const voicemail = voicemail_enabled && voicemail_message ? voicemail_message : undefined;

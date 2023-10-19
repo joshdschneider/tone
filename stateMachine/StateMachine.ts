@@ -139,6 +139,7 @@ export class StateMachine {
             this.abort();
             this.setState(AgentState.SPEAKING);
             this.recover();
+            return;
 
           default:
             throw new Error(`Unhandled event ${event} in state ${AgentState.SPEAKING}`);
