@@ -68,17 +68,20 @@ export type Agent = {
   call_settings: CallSettings | null;
   texts_enabled: boolean;
   text_settings: TextSettings | null;
+  language: string | null;
   created_at: Date;
   updated_at: Date;
   deleted_At: Date | null;
 };
 
 export type CallSettings = {
-  inbound_enabled: boolean;
   outbound_enabled: boolean;
-  greeting: string | null;
-  voicemail: string | null;
-  language: string | null;
+  custom_outbound_greeting_enabled: boolean;
+  custom_outbound_greeting: string | null;
+  voicemail_enabled: boolean;
+  voicemail_message: string | null;
+  inbound_enabled: boolean;
+  custom_inbound_greeting: string | null;
   keywords: string | null;
   voice_provider: VoiceProvider;
   voice_options: VoiceOptions;

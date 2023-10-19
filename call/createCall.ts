@@ -1,6 +1,7 @@
 import WebSocket from 'ws';
 import { createAgent } from '../agent/createAgent';
 import { getActionFunctions } from '../helpers/getActionFunctions';
+import { getGreeting } from '../helpers/getGreeting';
 import { injectContext } from '../helpers/injectContext';
 import { parseContext } from '../helpers/parseContext';
 import { parseVariables } from '../helpers/parseVariables';
@@ -30,9 +31,12 @@ export async function createCall({ socket, data }: CreateCallProps) {
   log(`Creating call with config: ${JSON.stringify(config)}`);
 
   const { direction, context, functions } = config;
-  const { id: agentId, prompt_text, variables, call_settings } = config.agent;
-  const { greeting, voicemail, voice_provider, voice_options, language, keywords } =
+  const { id: agentId, prompt_text, variables, call_settings, language } = config.agent;
+  const { voicemail_enabled, voicemail_message, voice_provider, voice_options, keywords } =
     call_settings!!;
+
+  const greeting = getGreeting(direction, call_settings);
+  const voicemail = voicemail_enabled && voicemail_message ? voicemail_message : undefined;
 
   const transcriber = createTranscriber({
     keywords: keywords || undefined,
@@ -48,9 +52,9 @@ export async function createCall({ socket, data }: CreateCallProps) {
   const agent = createAgent({
     id: agentId,
     prompt,
-    greeting: greeting || undefined,
+    greeting,
     eagerGreet: true,
-    voicemail: voicemail || undefined,
+    voicemail,
     functions: actionFunctions,
     voiceProvider: voice_provider || undefined,
     voiceOptions: voice_options || undefined,
