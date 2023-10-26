@@ -23,7 +23,7 @@ export class Transcriber extends EventEmitter {
     this.connection.on('transcriptReceived', (data: string) => this.handleTranscript(data));
     this.connection.on('close', () => this.handleConnectionClose());
     this.connection.on('error', (err: any) => this.handleConnectionError(err));
-    this.confidenceThreshold = 0.7;
+    this.confidenceThreshold = 0.75;
   }
 
   private handleConnectionOpen() {

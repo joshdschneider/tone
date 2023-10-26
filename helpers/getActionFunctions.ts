@@ -6,20 +6,14 @@ const DEFAULT_ACTION_FUNCTIONS: ActionFunction[] = [
     name: 'end_call',
     description: `End the call and hang up the phone. Call this function when conversation is over and the human has used a closing phrase like "Goodbye" or "Take care".`,
     hoist_final_response: true,
-    parameters: {
-      type: 'object',
-      properties: {},
-    },
+    parameters: { type: 'object', properties: {} },
   },
   {
     action_id: 'default',
     name: 'hold_call',
-    description: `Place the call on hold. Call this function when the human asks you to hold.`,
+    description: `Place the call on hold. Call this function when the human asks you to hold or wait.`,
     hoist_final_response: true,
-    parameters: {
-      type: 'object',
-      properties: {},
-    },
+    parameters: { type: 'object', properties: {} },
   },
 ];
 

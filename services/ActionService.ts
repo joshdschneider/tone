@@ -7,15 +7,14 @@ type ExecuteResponse = {
   data: any;
 };
 
-async function execute(id: string, args: any): Promise<ExecuteResponse> {
-  console.log(args);
+async function execute(id: string, callId: string, args: any): Promise<ExecuteResponse> {
   const response = await fetch(`${BASE_URL}/${id}/execute`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${TONE_INTERNAL_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ args }),
+    body: JSON.stringify({ call_id: callId, args }),
   });
 
   const data = await response.json();

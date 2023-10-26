@@ -143,7 +143,15 @@ export class Generator extends EventEmitter {
     }
 
     if (responseType === ResponseType.FUNCTION_CALL) {
-      const parsedArgs = JSON.parse(args);
+      log(`Function called with args: ${args}`);
+      let parsedArgs: any;
+      try {
+        parsedArgs = JSON.parse(args);
+      } catch (err) {
+        log('Failed to parse args', LogLevel.ERROR);
+        captureException(err);
+      }
+
       this.emit('function_call', {
         name,
         args: parsedArgs,

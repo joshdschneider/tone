@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { captureException } from '../helpers/captureException';
+import ActionService from '../services/ActionService';
 import { Synthesizer } from '../synthesizer/Synthesizer';
 import { createSynthesizer } from '../synthesizer/createSynthesizer';
 import {
@@ -20,10 +21,19 @@ export type SpeechConstructor = {
   language?: string;
 };
 
+type ActionPayload = {
+  callId: string;
+  actionId: string;
+  args: any;
+};
+
 export abstract class Speech extends EventEmitter {
   public synthesizer: Synthesizer;
   public pregenerated?: boolean;
   public language?: string;
+  public endCallOnDone?: boolean;
+  public transferCallOnDone?: boolean;
+  public transferCallPayload?: ActionPayload;
   private timestamp: number;
   private queue: SynthesisChunk[];
   private isProcessing: boolean;
@@ -57,7 +67,7 @@ export abstract class Speech extends EventEmitter {
       log(`Stopping speech queue`);
       this.isProcessing = false;
       if (this.isDone) {
-        this.emit('done');
+        this.onDone();
       }
       return;
     }
@@ -130,8 +140,35 @@ export abstract class Speech extends EventEmitter {
     log('Synthesis done');
     this.isDone = true;
     if (this.queue.length === 0) {
+      this.onDone();
+    }
+  }
+
+  private onDone() {
+    if (this.endCallOnDone) {
+      this.emit('end');
+    } else if (this.transferCallOnDone) {
+      this.transferCall();
+    } else {
       this.emit('done');
     }
+  }
+
+  private transferCall() {
+    setTimeout(() => {
+      if (!this.transferCallPayload) {
+        const err = new Error('Transfer call payload not found');
+        log(err, LogLevel.ERROR);
+        this.emit('error', err);
+        return;
+      }
+
+      const { callId, actionId, args } = this.transferCallPayload;
+      ActionService.execute(actionId, callId, args).catch((err) => {
+        log('Action error', LogLevel.ERROR);
+        this.emit('error', err);
+      });
+    }, 1000);
   }
 
   private handleSynthesisError(err: any) {

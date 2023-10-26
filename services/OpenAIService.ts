@@ -1,10 +1,14 @@
 import { ParsedEvent, ReconnectInterval, createParser } from 'eventsource-parser';
-import { OpenAIFunction, OpenAIMessage } from '../types';
+import { captureException } from '../helpers/captureException';
+import { OpenAIFunction, OpenAIMessage, Role } from '../types';
+import { DEFAULT_ERROR_MESSAGE } from '../utils/constants';
+import { LogLevel, log } from '../utils/log';
 
 const API_KEY = process.env.OPENAI_API_KEY as string;
 const BASE_URL = 'https://api.openai.com/v1';
 const URL = `${BASE_URL}/chat/completions`;
-const DEFAULT_MODEL = 'gpt-3.5-turbo-0613';
+const GPT_TURBO = 'gpt-3.5-turbo';
+const GPT_TURBO_16K = 'gpt-3.5-turbo-16k';
 const DEFAULT_TEMPERATURE = 0.5;
 
 type GenerateCompletionRequest = {
@@ -21,10 +25,11 @@ async function generateCompletion({ messages, functions, signal }: GenerateCompl
     },
     method: 'POST',
     body: JSON.stringify({
-      model: DEFAULT_MODEL,
+      model: fetchModel(messages),
       temperature: DEFAULT_TEMPERATURE,
       messages,
       functions,
+      function_call: 'auto',
       stream: true,
     }),
     signal,
@@ -67,6 +72,28 @@ async function generateCompletion({ messages, functions, signal }: GenerateCompl
   });
 
   return readableStream;
+}
+
+function fetchModel(messages: OpenAIMessage[]) {
+  try {
+    if (messages.length > 0) {
+      const role = messages[0].role;
+      if (role === Role.SYSTEM) {
+        const promptText = messages[0].content;
+        const upperLimit = 12000;
+        if (promptText.length > upperLimit) {
+          return GPT_TURBO_16K;
+        } else {
+          return GPT_TURBO;
+        }
+      }
+    }
+    throw new Error(DEFAULT_ERROR_MESSAGE);
+  } catch (err) {
+    log('OpenAIService error', LogLevel.ERROR);
+    captureException(err);
+    return GPT_TURBO;
+  }
 }
 
 export default { generateCompletion };

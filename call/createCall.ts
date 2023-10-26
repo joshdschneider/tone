@@ -27,8 +27,13 @@ export async function createCall({ socket, data }: CreateCallProps) {
 
   const { direction, context, functions } = config;
   const { id: agentId, prompt_text, variables, call_settings, language } = config.agent;
+
+  if (!call_settings) {
+    throw new Error('Call settings not found');
+  }
+
   const { voicemail_enabled, voicemail_message, voice_provider, voice_options, keywords } =
-    call_settings!;
+    call_settings;
 
   const greeting = getGreeting(direction, call_settings);
   const voicemail = voicemail_enabled && voicemail_message ? voicemail_message : undefined;
@@ -46,6 +51,7 @@ export async function createCall({ socket, data }: CreateCallProps) {
 
   const agent = createAgent({
     id: agentId,
+    callId,
     prompt,
     greeting,
     eagerGreet: true,
