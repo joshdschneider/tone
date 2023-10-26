@@ -145,6 +145,7 @@ export abstract class Speech extends EventEmitter {
   }
 
   private onDone() {
+    log('Handling speech done');
     if (this.endCallOnDone) {
       this.emit('end');
     } else if (this.transferCallOnDone) {
@@ -155,6 +156,7 @@ export abstract class Speech extends EventEmitter {
   }
 
   private transferCall() {
+    log('Handling transfer call');
     setTimeout(() => {
       if (!this.transferCallPayload) {
         const err = new Error('Transfer call payload not found');
@@ -164,10 +166,12 @@ export abstract class Speech extends EventEmitter {
       }
 
       const { callId, actionId, args } = this.transferCallPayload;
-      ActionService.execute(actionId, callId, args).catch((err) => {
-        log('Action error', LogLevel.ERROR);
-        this.emit('error', err);
-      });
+      ActionService.execute(actionId, callId, args)
+        .then((res) => console.log(res))
+        .catch((err) => {
+          log('Action error', LogLevel.ERROR);
+          this.emit('error', err);
+        });
     }, 1000);
   }
 

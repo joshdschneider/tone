@@ -26,7 +26,7 @@ export async function createCall({ socket, data }: CreateCallProps) {
   log(`Creating call with config: ${JSON.stringify(config)}`);
 
   const { direction, context, functions } = config;
-  const { id: agentId, prompt_text, variables, call_settings, language } = config.agent;
+  const { id: agentId, prompt_text, variables, call_settings, language, timezone } = config.agent;
 
   if (!call_settings) {
     throw new Error('Call settings not found');
@@ -46,8 +46,10 @@ export async function createCall({ socket, data }: CreateCallProps) {
   const parsedVariables = parseVariables(variables);
   const parsedContext = parseContext(context);
   const promptWithContext = injectContext(prompt_text, parsedVariables, parsedContext);
-  const prompt = wrapPrompt(promptWithContext);
+  const prompt = wrapPrompt(promptWithContext, timezone);
   const actionFunctions = getActionFunctions(functions);
+
+  console.log(prompt);
 
   const agent = createAgent({
     id: agentId,

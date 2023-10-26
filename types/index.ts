@@ -69,6 +69,7 @@ export type Agent = {
   texts_enabled: boolean;
   text_settings: TextSettings | null;
   language: string | null;
+  timezone: string | null;
   created_at: Date;
   updated_at: Date;
   deleted_At: Date | null;

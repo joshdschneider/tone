@@ -150,6 +150,7 @@ export class Generator extends EventEmitter {
       } catch (err) {
         log('Failed to parse args', LogLevel.ERROR);
         captureException(err);
+        parsedArgs = {};
       }
 
       this.emit('function_call', {
