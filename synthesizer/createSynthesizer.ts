@@ -1,5 +1,6 @@
-import { VoiceOptions, VoiceProvider } from '../types';
+import { ElevenLabsOptions, RimeOptions, VoiceOptions, VoiceProvider } from '../types';
 import { createElevenLabsSynthesizer } from './createElevenLabsSynthesizer';
+import { createRimeSynthesizer } from './createRimeSynthesizer';
 
 export type CreateSynthesizerProps = {
   voiceProvider?: VoiceProvider;
@@ -18,7 +19,16 @@ export function createSynthesizer({
 
   switch (provider) {
     case VoiceProvider.ELEVENLABS:
-      return createElevenLabsSynthesizer({ voiceOptions, language });
+      return createElevenLabsSynthesizer({
+        voiceOptions: voiceOptions as ElevenLabsOptions,
+        language,
+      });
+
+    case VoiceProvider.ELEVENLABS:
+      return createRimeSynthesizer({
+        voiceOptions: voiceOptions as RimeOptions,
+        language,
+      });
 
     default:
       throw new Error(`Voice provider ${voiceProvider} not supported`);

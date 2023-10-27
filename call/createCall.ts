@@ -8,7 +8,7 @@ import { parseVariables } from '../helpers/parseVariables';
 import { wrapPrompt } from '../helpers/wrapPrompt';
 import CallService from '../services/CallService';
 import { createTranscriber } from '../transcriber/createTranscriber';
-import { CallConfiguration, ConnectionEvent } from '../types';
+import { CallConfiguration, ConnectionEvent, VoiceProvider } from '../types';
 import { log } from '../utils/log';
 import { Call } from './Call';
 
@@ -51,8 +51,13 @@ export async function createCall({ socket, data }: CreateCallProps) {
     eagerGreet: true,
     voicemail,
     functions: actionFunctions,
-    voiceProvider: voice_provider || undefined,
-    voiceOptions: voice_options || undefined,
+    // voiceProvider: voice_provider || undefined,
+    // voiceOptions: voice_options || undefined,
+    voiceProvider: VoiceProvider.RIME,
+    voiceOptions: {
+      speaker: 'rose',
+      speedAlpha: 1.0,
+    },
     language: language || undefined,
   });
 

@@ -1,7 +1,7 @@
 import { RawData, WebSocket } from 'ws';
 import { captureException } from '../helpers/captureException';
 import ElevenLabsService from '../services/ElevenLabsService';
-import { VoiceOptions } from '../types';
+import { ElevenLabsOptions } from '../types';
 import { LogLevel, log } from '../utils/log';
 import { Synthesizer } from './Synthesizer';
 
@@ -16,7 +16,7 @@ export enum OutputFormat {
 }
 
 export type ElevenLabsSynthesizerConstructor = {
-  voiceOptions?: VoiceOptions;
+  voiceOptions?: ElevenLabsOptions;
   language?: string;
 };
 

@@ -32,9 +32,7 @@ export class InactivityCheck extends Speech {
     };
 
     if (this.voiceOptions) {
-      this.synthesize(chunk, {
-        key: `inactivity_first_check:${this.voiceOptions.id}`,
-      });
+      this.synthesize(chunk);
     } else {
       this.synthesize(chunk);
     }
@@ -49,9 +47,7 @@ export class InactivityCheck extends Speech {
     };
 
     if (this.voiceOptions) {
-      this.synthesize(chunk, {
-        key: `inactivity_final_check:${this.voiceOptions.id}`,
-      });
+      this.synthesize(chunk);
     } else {
       this.synthesize(chunk);
     }

@@ -1,6 +1,6 @@
 import { Generator, Split } from '../generator/Generator';
 import { createGenerator } from '../generator/createGenerator';
-import { ActionFunction, FunctionCall, Message, TextChunk } from '../types';
+import { ActionFunction, FunctionCall, Message, TextChunk, VoiceProvider } from '../types';
 import { LogLevel, log } from '../utils/log';
 import { Speech, SpeechConstructor } from './Speech';
 
@@ -26,7 +26,14 @@ export class Response extends Speech {
   }: ResponseConstructor) {
     super({ voiceProvider, voiceOptions });
     this.pregenerated = pregenerated;
-    this.generator = createGenerator({ messages, prompt, functions, split });
+
+    this.generator = createGenerator({
+      messages,
+      prompt,
+      functions,
+      split: this.getSplit(voiceProvider),
+    });
+
     this.generator.on('text', (chunk: TextChunk) => this.handleTextChunk(chunk));
     this.generator.on('function_call', (func: FunctionCall) => this.handleFunctionCall(func));
     this.generator.on('done', () => this.handleGeneratorDone());
@@ -36,6 +43,14 @@ export class Response extends Speech {
 
   private handleTextChunk(textChunk: TextChunk) {
     this.synthesize(textChunk);
+  }
+
+  private getSplit(voiceProvider?: VoiceProvider) {
+    if (voiceProvider === VoiceProvider.ELEVENLABS) {
+      return Split.WORD;
+    } else {
+      return Split.SENTENCE;
+    }
   }
 
   private async handleFunctionCall(func: FunctionCall) {

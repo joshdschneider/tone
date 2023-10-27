@@ -7,6 +7,7 @@ export enum CallDirection {
 
 export enum VoiceProvider {
   ELEVENLABS = 'ELEVENLABS',
+  RIME = 'RIME',
 }
 
 export type CallConfiguration = {
@@ -100,13 +101,19 @@ export type Variable = {
 export type VariableSource = {};
 
 export type ElevenLabsOptions = {
+  provider: VoiceProvider.ELEVENLABS;
   id: string;
   name: string;
   stability?: number;
   similarity_boost?: number;
 };
 
-export type VoiceOptions = ElevenLabsOptions; // Mutex based on provider
+export type RimeOptions = {
+  speaker: string;
+  speedAlpha: number;
+};
+
+export type VoiceOptions = ElevenLabsOptions | RimeOptions;
 
 export enum AgentState {
   IDLE = 'IDLE',

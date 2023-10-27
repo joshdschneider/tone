@@ -25,12 +25,6 @@ export class Recovery extends Speech {
       isFinal: true,
     };
 
-    if (this.voiceOptions) {
-      this.synthesize(chunk, {
-        key: `recovery:${this.voiceOptions.id}`,
-      });
-    } else {
-      this.synthesize(chunk);
-    }
+    this.synthesize(chunk);
   }
 }
