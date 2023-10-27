@@ -24,7 +24,7 @@ export function createSynthesizer({
         language,
       });
 
-    case VoiceProvider.ELEVENLABS:
+    case VoiceProvider.RIME:
       return createRimeSynthesizer({
         voiceOptions: voiceOptions as RimeOptions,
         language,

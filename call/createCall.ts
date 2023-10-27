@@ -55,8 +55,8 @@ export async function createCall({ socket, data }: CreateCallProps) {
     // voiceOptions: voice_options || undefined,
     voiceProvider: VoiceProvider.RIME,
     voiceOptions: {
-      speaker: 'rose',
-      speedAlpha: 1.0,
+      speaker: 'tim',
+      speedAlpha: 1.3,
     },
     language: language || undefined,
   });
