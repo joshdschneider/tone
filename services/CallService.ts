@@ -1,4 +1,4 @@
-import { CallConfiguration } from '../types';
+import { CallConfiguration, Message } from '../types';
 import { TONE_API_URL, TONE_INTERNAL_API_KEY } from '../utils/constants';
 
 const BASE_URL = `${TONE_API_URL}/internal/calls`;
@@ -19,7 +19,10 @@ async function getCallConfig(callId: string): Promise<GetCallConfigResponse> {
 }
 
 type EndCallPayload = {
-  // TODO
+  start: number;
+  end: number;
+  messages: Message[];
+  missed: boolean;
 };
 
 type EndCallResponse = {
@@ -28,7 +31,7 @@ type EndCallResponse = {
 };
 
 async function saveCall(callId: string, payload: EndCallPayload): Promise<EndCallResponse> {
-  const response = await fetch(`${BASE_URL}/${callId}/end`, {
+  const response = await fetch(`${BASE_URL}/${callId}/save`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${TONE_INTERNAL_API_KEY}`,

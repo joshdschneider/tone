@@ -18,7 +18,7 @@ const DEFAULT_ACTION_FUNCTIONS: ActionFunction[] = [
   {
     action_id: 'default',
     name: 'detect_voicemail',
-    description: `Detect if the current call went to voicemail. Call this function if responses are coming from an answering machine. Look for common voice mail system phrases like "You have reached the voicemail" and "Leave a message after the tone"`,
+    description: `Detect if the current call went to voicemail. Call this function if responses are coming from an answering machine. Look for common voice mail system phrases like "You have reached the voicemail", "Leave a message after the tone", "This call has been forwarded to an automated voice message system", etc.`,
     hoist_final_response: true,
     parameters: { type: 'object', properties: {} },
   },

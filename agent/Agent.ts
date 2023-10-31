@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { captureException } from '../helpers/captureException';
+import { detectVoicemail } from '../helpers/detectVoicemail';
 import { Speech } from '../speech/Speech';
 import { createGreeting } from '../speech/createGreeting';
 import { createInactivityCheck } from '../speech/createInactivityCheck';
@@ -185,10 +186,15 @@ export class Agent extends EventEmitter {
   }
 
   private greet() {
+    const detected = detectVoicemail(this.messages);
+    if (detected) {
+      this.handleVoicemailDetected();
+      return;
+    }
+
     if (this.speech && this.speech.pregenerated) {
       log(`Using pregenerated speech`);
       this.speech.dequeuePregenerated();
-      this.stripHoistedGreeting();
       return;
     }
 
@@ -253,11 +259,16 @@ export class Agent extends EventEmitter {
 
   private pregenerate() {
     log('Creating pregenerated greeting');
-    this.hoistGreeting();
+    const hoistedMessage: Message = {
+      role: Role.USER,
+      content: getHoistedGreetingContent(this.language),
+      start: now(),
+      end: now(),
+    };
 
     this.speech = createResponse({
       callId: this.callId,
-      messages: this.messages,
+      messages: [hoistedMessage, ...this.messages],
       prompt: this.prompt,
       functions: this.functions,
       temperature: this.temperature,
@@ -347,29 +358,8 @@ export class Agent extends EventEmitter {
 
   private handleVoicemailDetected() {
     log('Voicemail detected');
+    this.emit('voicemail_detected');
     this.enqueue(CallEvent.VOICEMAIL_DETECTED);
-  }
-
-  private hoistGreeting() {
-    log('Hoisting greeting for pregeneration');
-    this.appendMessage({
-      role: Role.USER,
-      content: getHoistedGreetingContent(this.language),
-      start: now(),
-      end: now(),
-    });
-  }
-
-  private stripHoistedGreeting() {
-    log('Removing hoisted greeting');
-    try {
-      if (this.messages[0].content.startsWith('Hello')) {
-        this.messages[0].content = this.messages[0].content.replace('Hello? ', '');
-      }
-    } catch (err) {
-      log('Error removing hoisted greeting', LogLevel.ERROR);
-      captureException(err);
-    }
   }
 
   private monitorInactivity(event: CallEvent) {

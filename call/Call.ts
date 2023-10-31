@@ -1,6 +1,8 @@
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
 import { Agent } from '../agent/Agent';
+import { captureException } from '../helpers/captureException';
+import CallService from '../services/CallService';
 import { Transcriber } from '../transcriber/Transcriber';
 import { CallDirection, CallEvent, Message, Role, Transcript } from '../types';
 import { LogLevel, log } from '../utils/log';
@@ -22,6 +24,7 @@ export class Call extends EventEmitter {
   private agent: Agent;
   private start: number;
   private end?: number;
+  private missed: boolean;
 
   constructor({ socket, id, direction, transcriber, agent }: CallConstructor) {
     super();
@@ -35,8 +38,10 @@ export class Call extends EventEmitter {
     this.agent = agent;
     this.agent.on('speech', (chunk: Buffer) => this.onAgentSpeech(chunk));
     this.agent.on('error', (err: any) => this.onAgentError(err));
+    this.agent.on('voicemail_detected', () => this.onVoicemailDetected());
     this.agent.on('end', () => this.onAgentEnd());
     this.start = now();
+    this.missed = false;
     this.startCall();
   }
 
@@ -56,11 +61,6 @@ export class Call extends EventEmitter {
 
   private handleDial(data: any) {
     log(`Dial received: ${JSON.stringify(data)}`);
-  }
-
-  private handleVoicemail(data: any) {
-    this.agent.enqueue(CallEvent.VOICEMAIL_DETECTED);
-    log(`Voicemail received: ${JSON.stringify(data)}`);
   }
 
   private onSocketClose() {
@@ -106,6 +106,11 @@ export class Call extends EventEmitter {
     this.endCall();
   }
 
+  private onVoicemailDetected() {
+    log('Call missed');
+    this.missed = true;
+  }
+
   private onAgentEnd() {
     log('Ending call from agent');
     this.endCall();
@@ -133,13 +138,14 @@ export class Call extends EventEmitter {
       this.socket.close();
     }
 
-    log(
-      JSON.stringify({
-        start: this.start,
-        end: this.end,
-        messages: this.agent.messages,
-      })
-    );
+    CallService.saveCall(this.id, {
+      start: this.start,
+      end: this.end,
+      messages: this.agent.messages,
+      missed: this.missed,
+    }).catch((err) => {
+      captureException(err);
+    });
 
     this.destroy();
   }
