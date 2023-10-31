@@ -16,7 +16,7 @@ export type CallConstructor = {
 
 export class Call extends EventEmitter {
   private socket: WebSocket;
-  private id: string;
+  public id: string;
   private direction: CallDirection;
   private transcriber: Transcriber;
   private agent: Agent;
@@ -48,6 +48,12 @@ export class Call extends EventEmitter {
     switch (data.event) {
       case 'websocket:dtmf':
         this.handleDial(data);
+        return;
+
+      case 'websocket:voicemail':
+        this.handleVoicemail(data);
+        return;
+
       default:
         log(`Unhandled event`, LogLevel.WARN);
     }
@@ -55,6 +61,10 @@ export class Call extends EventEmitter {
 
   private handleDial(data: any) {
     log(`Dial received: ${JSON.stringify(data)}`);
+  }
+  private handleVoicemail(data: any) {
+    this.agent.enqueue(CallEvent.VOICEMAIL_DETECTED);
+    log(`Voicemail received: ${JSON.stringify(data)}`);
   }
 
   private onSocketClose() {

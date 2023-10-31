@@ -147,7 +147,7 @@ export abstract class Speech extends EventEmitter {
   private onDone() {
     log('Handling speech done');
     if (this.endCallOnDone) {
-      this.emit('end');
+      setTimeout(() => this.emit('end'), 1000);
     } else if (this.transferCallOnDone) {
       this.transferCall();
     } else {

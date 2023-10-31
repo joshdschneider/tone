@@ -6,6 +6,7 @@ export type StateMachineConstructor = {
   eagerGreet: boolean;
   greet: () => void;
   respond: () => void;
+  leaveVoicemail: () => void;
   pregenerate: () => void;
   cleanup: () => void;
   abort: () => void;
@@ -19,6 +20,7 @@ export class StateMachine {
   private eagerGreet: boolean;
   private greet: () => void;
   private respond: () => void;
+  private leaveVoicemail: () => void;
   private pregenerate: () => void;
   private cleanup: () => void;
   private abort: () => void;
@@ -31,6 +33,7 @@ export class StateMachine {
     eagerGreet,
     greet,
     respond,
+    leaveVoicemail,
     pregenerate,
     cleanup,
     abort,
@@ -42,6 +45,7 @@ export class StateMachine {
     this.eagerGreet = eagerGreet;
     this.greet = greet;
     this.respond = respond;
+    this.leaveVoicemail = leaveVoicemail;
     this.pregenerate = pregenerate;
     this.cleanup = cleanup;
     this.abort = abort;
@@ -87,6 +91,10 @@ export class StateMachine {
             this.check(event);
             return;
 
+          case CallEvent.VOICEMAIL_DETECTED:
+            this.setState(AgentState.VOICEMAIL);
+            return;
+
           default:
             throw new Error(`Unhandled event ${event} in state ${AgentState.IDLE}`);
         }
@@ -110,6 +118,10 @@ export class StateMachine {
 
           case CallEvent.INACTIVITY_THIRD:
             this.check(event);
+            return;
+
+          case CallEvent.VOICEMAIL_DETECTED:
+            this.setState(AgentState.VOICEMAIL);
             return;
 
           default:
@@ -141,8 +153,27 @@ export class StateMachine {
             this.recover();
             return;
 
+          case CallEvent.VOICEMAIL_DETECTED:
+            this.abort();
+            this.setState(AgentState.VOICEMAIL);
+            return;
+
           default:
             throw new Error(`Unhandled event ${event} in state ${AgentState.SPEAKING}`);
+        }
+
+      case AgentState.VOICEMAIL:
+        switch (event) {
+          case CallEvent.TRANSCRIPT_PARTIAL:
+            this.abort();
+            this.setState(AgentState.VOICEMAIL);
+            return;
+
+          case CallEvent.TRANSCRIPT_FULL:
+          case CallEvent.TRANSCRIPT_FINAL:
+            this.abort();
+            this.leaveVoicemail();
+            return;
         }
 
       default:

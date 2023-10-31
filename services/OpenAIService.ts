@@ -14,10 +14,16 @@ const DEFAULT_TEMPERATURE = 0.5;
 type GenerateCompletionRequest = {
   messages: OpenAIMessage[];
   functions?: OpenAIFunction[];
+  temperature?: number;
   signal: AbortSignal;
 };
 
-async function generateCompletion({ messages, functions, signal }: GenerateCompletionRequest) {
+async function generateCompletion({
+  messages,
+  functions,
+  temperature,
+  signal,
+}: GenerateCompletionRequest) {
   const res = await fetch(URL, {
     headers: {
       'Content-Type': 'application/json',
@@ -26,7 +32,7 @@ async function generateCompletion({ messages, functions, signal }: GenerateCompl
     method: 'POST',
     body: JSON.stringify({
       model: fetchModel(messages),
-      temperature: DEFAULT_TEMPERATURE,
+      temperature: temperature || DEFAULT_TEMPERATURE,
       messages,
       functions,
       function_call: 'auto',

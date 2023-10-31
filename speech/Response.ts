@@ -12,6 +12,7 @@ export type ResponseConstructor = {
   messages: Message[];
   prompt?: string;
   functions?: ActionFunction[];
+  temperature?: number;
   split?: Split;
   pregenerated?: boolean;
 } & SpeechConstructor;
@@ -22,6 +23,7 @@ export class Response extends Speech {
   private messages: Message[];
   private prompt?: string;
   private functions?: ActionFunction[];
+  private temperature?: number;
   private split?: Split;
 
   constructor({
@@ -29,6 +31,7 @@ export class Response extends Speech {
     messages,
     prompt,
     functions,
+    temperature,
     split,
     voiceProvider,
     voiceOptions,
@@ -39,6 +42,7 @@ export class Response extends Speech {
     this.messages = messages;
     this.prompt = prompt;
     this.functions = functions;
+    this.temperature = temperature;
     this.split = split;
     this.pregenerated = pregenerated;
     this.generate();
@@ -49,6 +53,7 @@ export class Response extends Speech {
       messages: this.messages,
       prompt: this.prompt,
       functions: this.functions,
+      temperature: this.temperature,
       split: this.split,
     });
 

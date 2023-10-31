@@ -58,7 +58,7 @@ export class ElevenLabsSynthesizer extends Synthesizer {
 
   private handleSocketOpen() {
     if (this.socket && this.terminate) {
-      log('TERMINATING FROM OPEN!!');
+      log('Terminating socket on open');
       this.socket.terminate();
       this.socket.removeAllListeners();
       this.socket = undefined;

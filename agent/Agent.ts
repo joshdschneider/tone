@@ -5,6 +5,7 @@ import { createGreeting } from '../speech/createGreeting';
 import { createInactivityCheck } from '../speech/createInactivityCheck';
 import { createRecovery } from '../speech/createRecovery';
 import { createResponse } from '../speech/createResponse';
+import { createVoicemail } from '../speech/createVoicemail';
 import { StateMachine } from '../stateMachine/StateMachine';
 import { createStateMachine } from '../stateMachine/createStateMachine';
 import {
@@ -29,6 +30,7 @@ export type AgentConstructor = {
   eagerGreet?: boolean;
   voicemail?: string;
   functions?: ActionFunction[];
+  temperature?: number;
   voiceProvider?: VoiceProvider;
   voiceOptions?: VoiceOptions;
   language?: string;
@@ -43,6 +45,7 @@ export class Agent extends EventEmitter {
   private eagerGreet?: boolean;
   private voicemail?: string;
   private functions?: ActionFunction[];
+  private temperature?: number;
   private voiceProvider?: VoiceProvider;
   private voiceOptions?: VoiceOptions;
   private language?: string;
@@ -65,6 +68,7 @@ export class Agent extends EventEmitter {
     eagerGreet,
     voicemail,
     functions,
+    temperature,
     voiceProvider,
     voiceOptions,
     language,
@@ -78,6 +82,7 @@ export class Agent extends EventEmitter {
     this.eagerGreet = eagerGreet;
     this.voicemail = voicemail;
     this.functions = functions;
+    this.temperature = temperature;
     this.voiceProvider = voiceProvider;
     this.voiceOptions = voiceOptions;
     this.language = language;
@@ -95,6 +100,7 @@ export class Agent extends EventEmitter {
       eagerGreet: !!this.eagerGreet,
       greet: () => this.greet(),
       respond: () => this.respond(),
+      leaveVoicemail: () => this.leaveVoicemail(),
       pregenerate: () => this.pregenerate(),
       cleanup: () => this.cleanup(),
       abort: () => this.abort(),
@@ -208,6 +214,7 @@ export class Agent extends EventEmitter {
       messages: this.messages,
       prompt: this.prompt,
       functions: this.functions,
+      temperature: this.temperature,
       voiceProvider: this.voiceProvider,
       voiceOptions: this.voiceOptions,
       language: this.language,
@@ -221,6 +228,28 @@ export class Agent extends EventEmitter {
     this.speech.on('error', (err: any) => this.handleSpeechError(err));
   }
 
+  private leaveVoicemail() {
+    if (!this.voicemail) {
+      log(`Ending call from leave voicemail`);
+      this.handleEndCall();
+      return;
+    }
+
+    log('Creating voicemail');
+    this.speech = createVoicemail({
+      voicemail: this.voicemail,
+      voiceProvider: this.voiceProvider,
+      voiceOptions: this.voiceOptions,
+      language: this.language,
+    });
+
+    this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
+    this.speech.on('message', (message: Message) => this.handleSpeechMessage(message));
+    this.speech.on('done', () => this.handleSpeechDone());
+    this.speech.on('end', () => this.handleEndCall());
+    this.speech.on('error', (err: any) => this.handleSpeechError(err));
+  }
+
   private pregenerate() {
     log('Creating pregenerated greeting');
     this.hoistGreeting();
@@ -230,6 +259,7 @@ export class Agent extends EventEmitter {
       messages: this.messages,
       prompt: this.prompt,
       functions: this.functions,
+      temperature: this.temperature,
       voiceProvider: this.voiceProvider,
       voiceOptions: this.voiceOptions,
       language: this.language,
@@ -306,9 +336,7 @@ export class Agent extends EventEmitter {
 
   private handleEndCall() {
     log('Handling end call');
-    setTimeout(() => {
-      this.emit('end');
-    }, 1000);
+    this.emit('end');
   }
 
   private handleHoldCall() {

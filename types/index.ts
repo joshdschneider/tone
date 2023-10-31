@@ -1,4 +1,9 @@
+import { WebSocket } from 'ws';
 import { Split } from '../generator/Generator';
+
+export interface CallSocket extends WebSocket {
+  callId?: string;
+}
 
 export enum CallDirection {
   OUTBOUND = 'OUTBOUND',
@@ -64,6 +69,7 @@ export type Agent = {
   prompt_raw: string | null;
   prompt_text: string | null;
   variables: string | null;
+  temperature: number | null;
   calls_enabled: boolean;
   call_settings: CallSettings | null;
   texts_enabled: boolean;
@@ -83,6 +89,7 @@ export type CallSettings = {
   voicemail_message: string | null;
   inbound_enabled: boolean;
   custom_inbound_greeting: string | null;
+  record_calls: boolean;
   keywords: string | null;
   voice_provider: VoiceProvider;
   voice_options: VoiceOptions;
@@ -113,6 +120,7 @@ export enum AgentState {
   IDLE = 'IDLE',
   LISTENING = 'LISTENING',
   SPEAKING = 'SPEAKING',
+  VOICEMAIL = 'VOICEMAIL',
 }
 
 export enum CallEvent {
@@ -126,6 +134,7 @@ export enum CallEvent {
   INACTIVITY_FIRST = 'INACTIVITY_FIRST',
   INACTIVITY_SECOND = 'INACTIVITY_SECOND',
   INACTIVITY_THIRD = 'INACTIVITY_THIRD',
+  VOICEMAIL_DETECTED = 'VOICEMAIL_DETECTED',
 }
 
 export type FunctionCall = {

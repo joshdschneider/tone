@@ -10,6 +10,7 @@ export type GeneratorConstructor = {
   messages: Message[];
   prompt?: string;
   functions?: ActionFunction[];
+  temperature?: number;
   split?: Split;
 };
 
@@ -17,14 +18,16 @@ export class Generator extends EventEmitter {
   private messages: Message[];
   private prompt?: string;
   private functions?: ActionFunction[];
+  private temperature?: number;
   private split: Split;
   private controller?: AbortController;
 
-  constructor({ messages, prompt, functions, split }: GeneratorConstructor) {
+  constructor({ messages, prompt, functions, temperature, split }: GeneratorConstructor) {
     super();
     this.messages = messages;
     this.prompt = prompt;
     this.functions = functions;
+    this.temperature = temperature;
     this.split = split || Split.WORD;
   }
 
@@ -57,6 +60,7 @@ export class Generator extends EventEmitter {
     OpenAIService.generateCompletion({
       messages: this.formatMessages(this.messages),
       functions: this.formatFunctions(this.functions),
+      temperature: this.temperature,
       signal: this.controller.signal,
     })
       .then(this.handleStream.bind(this))

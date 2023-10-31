@@ -1,11 +1,12 @@
 import WebSocket from 'ws';
 import { Call } from '../call/Call';
 import { createCall } from '../call/createCall';
+import { CallSocket } from '../types';
 import { LogLevel, log } from '../utils/log';
 import { now } from '../utils/now';
 import { captureException } from './captureException';
 
-export function handleConnection(socket: WebSocket.WebSocket) {
+export function handleConnection(socket: CallSocket) {
   log('New client connected');
   let call: Call | undefined;
 
@@ -30,6 +31,7 @@ export function handleConnection(socket: WebSocket.WebSocket) {
           createCall({ socket, data })
             .then((callInstance) => {
               call = callInstance;
+              socket.callId = call.id;
             })
             .catch((err) => {
               captureException(err);
