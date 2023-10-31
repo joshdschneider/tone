@@ -223,6 +223,7 @@ export class Agent extends EventEmitter {
     this.speech.on('speech', (speech: Buffer) => this.handleSpeech(speech));
     this.speech.on('message', (message: Message) => this.handleSpeechMessage(message));
     this.speech.on('done', () => this.handleSpeechDone());
+    this.speech.on('voicemail_detected', () => this.handleVoicemailDetected());
     this.speech.on('end', () => this.handleEndCall());
     this.speech.on('hold', () => this.handleHoldCall());
     this.speech.on('error', (err: any) => this.handleSpeechError(err));
@@ -342,6 +343,11 @@ export class Agent extends EventEmitter {
   private handleHoldCall() {
     log('Handling hold call');
     this.isHolding = true;
+  }
+
+  private handleVoicemailDetected() {
+    log('Voicemail detected');
+    this.enqueue(CallEvent.VOICEMAIL_DETECTED);
   }
 
   private hoistGreeting() {

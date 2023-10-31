@@ -57,6 +57,7 @@ export class Call extends EventEmitter {
   private handleDial(data: any) {
     log(`Dial received: ${JSON.stringify(data)}`);
   }
+
   private handleVoicemail(data: any) {
     this.agent.enqueue(CallEvent.VOICEMAIL_DETECTED);
     log(`Voicemail received: ${JSON.stringify(data)}`);

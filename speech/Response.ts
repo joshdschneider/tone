@@ -80,7 +80,10 @@ export class Response extends Speech {
 
   private executeFunction(func: ActionFunction, args: any) {
     log(`Executing function: ${func.name}`);
-    if (func.name === 'end_call') {
+    if (func.name === 'detect_voicemail') {
+      this.cleanup();
+      this.emit('voicemail_detected');
+    } else if (func.name === 'end_call') {
       this.cleanup();
       this.pushFunctionCallMessage(func.name, args);
       this.pushFunctionResponseMessage(func.name, { success: true });

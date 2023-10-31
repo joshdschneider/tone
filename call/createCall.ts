@@ -44,7 +44,8 @@ export async function createCall({ socket, data }: CreateCallProps) {
     call_settings;
 
   const greeting = getGreeting(direction, call_settings);
-  const voicemail = voicemail_enabled && voicemail_message ? voicemail_message : undefined;
+  const hasVoicemail = voicemail_enabled && !!voicemail_message;
+  const voicemail = hasVoicemail ? voicemail_message : undefined;
 
   const transcriber = createTranscriber({
     keywords: keywords || undefined,
