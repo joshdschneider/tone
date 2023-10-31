@@ -31,7 +31,6 @@ export function handleConnection(socket: CallSocket) {
           createCall({ socket, data })
             .then((callInstance) => {
               call = callInstance;
-              socket.callId = call.id;
             })
             .catch((err) => {
               captureException(err);

@@ -49,11 +49,6 @@ export class Call extends EventEmitter {
       case 'websocket:dtmf':
         this.handleDial(data);
         return;
-
-      case 'websocket:voicemail':
-        this.handleVoicemail(data);
-        return;
-
       default:
         log(`Unhandled event`, LogLevel.WARN);
     }
